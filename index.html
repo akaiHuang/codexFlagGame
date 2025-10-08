@@ -80,15 +80,16 @@
       position: absolute;
       inset: 0;
       display: flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: 3px;
-      padding: 20px;
+      padding: 0;
       animation: scroll-left 80s linear infinite;
       width: 200%;
+      overflow: hidden;
     }
     .flag-bg .flag-item {
       font-size: 160px;
-      line-height: 1;
+      line-height: 1.1;
       flex-shrink: 0;
       opacity: 0.6;
     }
@@ -102,8 +103,8 @@
       position: absolute;
       inset: 0;
       background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
     
     /* 首頁內容 */
