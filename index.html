@@ -650,38 +650,61 @@
     }
 
     async function submitScore() {
+      console.log('🎯 submitScore() 開始');
       const s = store.get();
       const acc = s.total ? Math.round(s.correct / s.total * 100) : 0;
+      console.log('📊 統計資料:', { bestStreak: s.bestStreak, accuracy: acc, total: s.total });
+      
       const ctx = await ensureFirebase();
       let user = ctx.auth.currentUser;
+      console.log('👤 當前使用者:', user ? `uid=${user.uid}` : '未登入');
+      
       if (!user) {
         try {
+          console.log('🔐 嘗試匿名登入...');
           await ctx.signInAnonymously(ctx.auth);
           user = ctx.auth.currentUser;
+          console.log('✅ 匿名登入成功:', user?.uid);
         } catch (err) {
-          console.error('unable to obtain auth user', err);
+          console.error('❌ 匿名登入失敗:', err);
           return;
         }
       }
       const uid = user?.uid;
-      if (!uid) return;
+      if (!uid) {
+        console.error('❌ 無法取得 uid');
+        return;
+      }
+      
       const region = els.region.value;
-      await ctx.setDoc(ctx.doc(ctx.db, 'scores', uid), {
+      const scoreData = {
         uid,
         bestStreak: s.bestStreak || 0,
         accuracy: acc,
         total: s.total || 0,
         region,
         ts: ctx.serverTimestamp()
-      }, { merge: true });
-      await ctx.setDoc(ctx.doc(ctx.db, 'scores_region', `${uid}_${region}`), {
-        uid,
-        bestStreak: s.bestStreak || 0,
-        accuracy: acc,
-        total: s.total || 0,
-        region,
-        ts: ctx.serverTimestamp()
-      }, { merge: true });
+      };
+      
+      console.log('💾 準備寫入 scores:', scoreData);
+      try {
+        await ctx.setDoc(ctx.doc(ctx.db, 'scores', uid), scoreData, { merge: true });
+        console.log('✅ scores 寫入成功');
+      } catch (err) {
+        console.error('❌ scores 寫入失敗:', err);
+        throw err;
+      }
+      
+      console.log('💾 準備寫入 scores_region:', `${uid}_${region}`);
+      try {
+        await ctx.setDoc(ctx.doc(ctx.db, 'scores_region', `${uid}_${region}`), scoreData, { merge: true });
+        console.log('✅ scores_region 寫入成功');
+      } catch (err) {
+        console.error('❌ scores_region 寫入失敗:', err);
+        throw err;
+      }
+      
+      console.log('✅ submitScore() 完成');
     }
 
     function renderBoard(globalRows, regionRows, regionKey) {
@@ -706,39 +729,68 @@
     }
 
     async function openLeaderboard() {
+      console.log('🏆 openLeaderboard() 開始');
       try {
         const ctx = await ensureFirebase();
         const { db, collection, query, orderBy, where, limit, getDocs } = ctx;
+        console.log('✅ Firebase 初始化完成');
         
         // 顯示載入中提示
         els.boardList.innerHTML = '<div class="item">載入中...</div>';
         els.boardModal.classList.add('show');
         
+        console.log('📤 呼叫 submitScore()...');
         await submitScore();
+        console.log('✅ submitScore() 完成');
+        
         const region = els.region.value;
+        console.log('🌍 選擇的地區:', region);
+        
+        console.log('📥 建立全球排行榜查詢...');
         const globalQ = query(collection(db, 'scores'), orderBy('bestStreak', 'desc'), limit(50));
+        
+        console.log('📥 建立地區排行榜查詢...');
         const regionQ = query(
           collection(db, 'scores_region'),
           where('region', '==', region),
           orderBy('bestStreak', 'desc'),
           limit(50)
         );
+        
+        console.log('🔄 執行查詢...');
         const [globalSnap, regionSnap] = await Promise.all([getDocs(globalQ), getDocs(regionQ)]);
+        console.log('✅ 查詢完成:', {
+          global: globalSnap.docs.length,
+          region: regionSnap.docs.length
+        });
+        
+        console.log('👥 增強名稱資訊...');
         const [globalRows, regionRows] = await Promise.all([
           augmentWithNames(ctx, globalSnap.docs.map(d => d.data())),
           augmentWithNames(ctx, regionSnap.docs.map(d => d.data()))
         ]);
+        console.log('✅ 名稱增強完成');
+        
         const sorter = (a, b) => {
           if ((b.bestStreak || 0) !== (a.bestStreak || 0)) return (b.bestStreak || 0) - (a.bestStreak || 0);
           return (b.accuracy || 0) - (a.accuracy || 0);
         };
+        
+        console.log('🎨 渲染排行榜...');
         renderBoard(
           globalRows.sort(sorter).slice(0, 20),
           regionRows.sort(sorter).slice(0, 20),
           region
         );
+        console.log('✅ openLeaderboard() 完成');
       } catch (err) {
-        console.error('載入排行榜失敗:', err);
+        console.error('❌ 載入排行榜失敗:', err);
+        console.error('錯誤詳情:', {
+          name: err.name,
+          code: err.code,
+          message: err.message,
+          stack: err.stack
+        });
         els.boardList.innerHTML = '<div class="item">載入失敗，請稍後再試</div>';
       }
     }
