@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 驗證使用者已登入
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // 驗證是資料擁有者
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // 防止頻繁寫入（3秒限流）
+    // 注意：使用 ts 欄位而非 updatedAt
+    function notTooFrequent() {
+      return !resource.exists || 
+             request.time > resource.data.ts + duration.value(3, 's');
+    }
+    
+    // profiles - 使用者名稱
+    match /profiles/{userId} {
+      // 🔓 公開讀取（排行榜需要顯示名稱）
+      allow read: if true;
+      
+      // 🔒 僅限擁有者寫入，限流，驗證資料
+      allow write: if isOwner(userId) && notTooFrequent() &&
+        request.resource.data.keys().hasAll(['name', 'createdAt', 'updatedAt']) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 50;
+    }
+    
+    // scores - 全球排行榜
+    match /scores/{userId} {
+      // 🔓 公開讀取（任何人都能瀏覽排行榜）
+      allow read: if true;
+      
+      // 🔒 僅限擁有者寫入，限流，驗證資料
+      allow write: if isOwner(userId) && notTooFrequent() &&
+        request.resource.data.bestStreak >= 0 &&
+        request.resource.data.bestStreak <= 1000 &&
+        request.resource.data.accuracy >= 0 &&
+        request.resource.data.accuracy <= 100 &&
+        request.resource.data.total >= 0 &&
+        request.resource.data.total <= 100000;
+    }
+    
+    // scores_region - 地區排行榜
+    match /scores_region/{userRegionId} {
+      // 🔓 公開讀取（任何人都能瀏覽排行榜）
+      allow read: if true;
+      
+      // 🔒 僅限擁有者寫入，限流，驗證資料
+      allow write: if isSignedIn() && notTooFrequent() &&
+        userRegionId.matches('^' + request.auth.uid + '_[A-Z]{2}$') &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.bestStreak >= 0 &&
+        request.resource.data.bestStreak <= 1000 &&
+        request.resource.data.accuracy >= 0 &&
+        request.resource.data.accuracy <= 100;
+    }
+    
+    // 拒絕其他所有存取
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

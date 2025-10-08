@@ -7,7 +7,11 @@
       "**/node_modules/**",
       "**/*.md",
       "firebase.config.js",
-      "firebase.config.example.js"
+      "firebase.config.example.js",
+      "storage.js",
+      "firebase.js",
+      "game.js",
+      "particles.js"
     ],
     "rewrites": [
       {
