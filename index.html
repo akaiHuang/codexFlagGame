@@ -45,7 +45,7 @@
       background: rgba(10, 15, 36, 0.9); backdrop-filter: blur(8px);
       box-shadow: 0 4px 12px rgba(0,0,0,.4);
     }
-    .hint { color: var(--muted); font-size:13px; margin-top:6px; position: relative; z-index: 1; }
+    .hint { color: var(--muted); font-size:13px; margin-top:6px; position: relative; z-index: 250; }
     .options { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:14px; }
     .opt {
       background: #131836; color: var(--text); border: 1px solid #2a315a; border-radius: 12px;
@@ -62,13 +62,13 @@
     @keyframes pulse { 0%{ transform:scale(1)} 50%{ transform:scale(1.02)} 100%{ transform:scale(1)} }
     @media (prefers-reduced-motion: reduce) { .shake, .celebrate { animation: none !important; } }
     .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 20px; }
-    .modal.show { display:flex; z-index: 200; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 300; }
+    .modal.show { display:flex; }
     .sheet { width:min(640px,100%); background:#0f132e; border:1px solid #2a315a; border-radius:16px; padding:16px; }
     .sheet h3 { margin:4px 0 10px }
     .table { font-size:14px; color:var(--muted); margin-top:8px; }
     .table .item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #243058; }
-    canvas#fx { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+    canvas#fx { position: fixed; inset: 0; pointer-events: none; z-index: 200; }
     
     /* 首頁樣式 */
     #homePage {
