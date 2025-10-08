@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <title>世界國旗挑戰</title>
+  <!-- Firebase 配置（本地開發用，需自行建立 firebase.config.js） -->
+  <script src="firebase.config.js"></script>
+  <style>
+    :root {
+      --bg: #0f1220; --card: #161a2b; --text: #e7e9f7; --muted: #9aa1c3;
+      --primary: #6ee7b7; --accent: #8ab4ff; --danger: #ff6b6b; --warn: #ffd166;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; background: linear-gradient(180deg,#0c0f1d,#121733 60%,#0f1220);
+      color: var(--text); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      min-height: 100svh; display: flex; flex-direction: column; align-items: center;
+    }
+    .wrap { width: min(720px, 100%); padding: env(safe-area-inset-top) 16px calc(12px + env(safe-area-inset-bottom)); }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 4px; }
+    h1 { margin:0; font-size:20px; letter-spacing:.5px }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    select, button, .pill {
+      background: #1b2140; color: var(--text); border: 1px solid #2a315a; border-radius: 12px;
+      padding: 10px 12px; font-size:14px;
+    }
+    button.primary { background: linear-gradient(135deg,#2a7f72,#26a69a); border: none; }
+    button.ghost { background: #151a2f; }
+    button:active { transform: scale(.98); }
+    main { margin-top: 8px; }
+    .card {
+      background: radial-gradient(1200px 80% at 50% -10%,rgba(138,180,255,.06),transparent),
+                  linear-gradient(0deg,rgba(110,231,183,.06),transparent 60%), var(--card);
+      border: 1px solid #2a315a; border-radius: 16px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .flag-box {
+      aspect-ratio: 4/3; border-radius: 12px; background: #0a0f24; border: 1px solid #2a315a;
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
+    }
+    .flag-box .flag { font-size: clamp(72px, 22vw, 140px); line-height:1; }
+    .hint { color: var(--muted); font-size:13px; margin-top:6px }
+    .options { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:14px; }
+    .opt {
+      background: #131836; color: var(--text); border: 1px solid #2a315a; border-radius: 12px;
+      padding: 12px; text-align:left; font-size:15px; line-height:1.25;
+    }
+    .opt.correct { border-color: #2dd4bf; background: #0f2a2a; }
+    .opt.wrong { border-color: var(--danger); background: #2a1217; }
+    .bar { display:flex; align-items:center; justify-content:space-between; margin-top:10px; color: var(--muted); font-size:13px }
+    .stat { display:flex; gap:10px; align-items:center }
+    .stat .pill { padding:6px 10px; border:1px solid #2a315a; background:#111735; border-radius:999px; }
+    .shake { animation: shake .4s; }
+    @keyframes shake { 10%, 90% { transform: translateX(-2px) } 20%, 80% { transform: translateX(3px) } 30%, 50%, 70% { transform: translateX(-6px) } 40%, 60% { transform: translateX(6px) } }
+    .celebrate { animation: pulse .5s ease-out; }
+    @keyframes pulse { 0%{ transform:scale(1)} 50%{ transform:scale(1.02)} 100%{ transform:scale(1)} }
+    @media (prefers-reduced-motion: reduce) { .shake, .celebrate { animation: none !important; } }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal.show { display:flex; }
+    .sheet { width:min(640px,100%); background:#0f132e; border:1px solid #2a315a; border-radius:16px; padding:16px; }
+    .sheet h3 { margin:4px 0 10px }
+    .table { font-size:14px; color:var(--muted); margin-top:8px; }
+    .table .item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #243058; }
+    canvas#fx { position: fixed; inset: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>世界國旗挑戰</h1>
+      <div class="controls">
+        <select id="region" aria-label="選擇地區">
+          <option value="global">全球</option>
+          <option value="asia">亞洲</option>
+          <option value="europe">歐洲</option>
+          <option value="africa">非洲</option>
+          <option value="americas">美洲</option>
+          <option value="oceania">大洋洲</option>
+        </select>
+        <select id="difficulty" aria-label="選擇難度">
+          <option value="easy">容易</option>
+          <option value="normal" selected>普通</option>
+          <option value="hard">困難</option>
+        </select>
+        <button id="mode" class="ghost" aria-label="切換遊戲模式">模式：一般</button>
+        <button id="reset" class="ghost" aria-label="重置遊戲紀錄">重置紀錄</button>
+        <span id="userLabel" class="pill" aria-label="當前使用者">訪客</span>
+        <button id="loginBtn" class="ghost" aria-label="開啟登入對話框">登入</button>
+        <button id="logoutBtn" class="ghost" style="display:none" aria-label="登出帳號">登出</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="card" class="card">
+        <div class="flag-box" id="flagBox" role="img" aria-label="當前國旗">
+          <div id="flag" class="flag">🏳️‍🌈</div>
+        </div>
+        <div class="hint" id="hint" aria-live="polite">請選出正確的國家名稱</div>
+        <div class="options" id="options" role="group" aria-label="答案選項"></div>
+        <div class="bar">
+          <div class="stat">
+            <span class="pill" aria-label="當前正確率">正確率 <b id="acc">0%</b></span>
+            <span class="pill" aria-label="當前連勝數">連勝 <b id="streak">0</b></span>
+            <span class="pill" aria-label="累積總題數">總題數 <b id="total">0</b></span>
+          </div>
+          <div class="row">
+            <button id="next" class="primary" aria-label="進入下一題">下一題 ▶</button>
+            <button id="stats" class="ghost" aria-label="查看統計資料">統計</button>
+            <button id="board" class="ghost" aria-label="查看排行榜">排行榜</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <canvas id="fx"></canvas>
+
+  <div id="statsModal" class="modal" role="dialog" aria-labelledby="statsTitle" aria-modal="true">
+    <div class="sheet">
+      <div class="row" style="justify-content:space-between">
+        <h3 id="statsTitle">我的統計</h3>
+        <button id="closeStats" class="ghost" aria-label="關閉統計視窗">關閉</button>
+      </div>
+      <div class="row" style="gap:12px">
+        <div class="pill">準確率 <b id="s_acc">0%</b></div>
+        <div class="pill">最佳連勝 <b id="s_best">0</b></div>
+        <div class="pill">累計題數 <b id="s_total">0</b></div>
+      </div>
+      <div class="table" id="wrongList"></div>
+    </div>
+  </div>
+
+  <div id="boardModal" class="modal" role="dialog" aria-labelledby="boardTitle" aria-modal="true">
+    <div class="sheet">
+      <div class="row" style="justify-content:space-between">
+        <h3 id="boardTitle">排行榜</h3>
+        <button id="closeBoard" class="ghost" aria-label="關閉排行榜視窗">關閉</button>
+      </div>
+      <div class="table" id="boardList"></div>
+    </div>
+  </div>
+
+  <div id="authModal" class="modal" role="dialog" aria-labelledby="authTitle" aria-modal="true">
+    <div class="sheet">
+      <div class="row" style="justify-content:space-between">
+        <h3 id="authTitle">登入</h3>
+        <button id="closeAuth" class="ghost" aria-label="關閉登入視窗">關閉</button>
+      </div>
+      <div class="row" style="flex-direction:column; align-items:stretch; gap:10px">
+        <button id="googleLogin" class="primary" aria-label="使用 Google 帳號登入">使用 Google 登入</button>
+        <button id="guestContinue" class="ghost" aria-label="以訪客身份繼續">以訪客繼續</button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <input id="nickname" placeholder="暱稱（選填，僅供排行榜顯示）" maxlength="24" aria-label="輸入暱稱"
+               style="padding:10px;border-radius:8px;border:1px solid #2a315a;background:#0f132e;color:#e7e9f7;width:100%" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const IntlNames = (() => {
+      try { return new Intl.DisplayNames(['zh-Hant'], { type: 'region' }); }
+      catch { return { of: (code) => code }; }
+    })();
+
+    const R = { AS:'asia', EU:'europe', AF:'africa', AM:'americas', OC:'oceania' };
+    const RAW = {
+      asia: 'JP CN TW HK MO KR KP VN TH MY SG ID PH IN PK BD LK NP KH LA MM MN AE SA QA KW OM BH JO IL TR IR IQ SY LB',
+      europe: 'FR DE IT ES PT NL BE LU IE GB NO SE FI DK IS PL CZ SK HU AT CH LI SI HR BA RS ME MK AL GR BG RO MD UA BY LT LV EE',
+      africa: 'EG MA DZ TN LY ET KE UG TZ RW BI GH NG CI SN CM CD ZA NA BW ZM ZW AO MZ MG',
+      americas: 'US CA MX CU DO HT JM PA CR NI SV GT HN CO VE PE EC BO PY UY AR CL BR',
+      oceania: 'AU NZ PG FJ WS TO'
+    };
+    const COUNTRIES = Object.entries(RAW)
+      .flatMap(([region, s]) => s.split(' ').map(code => ({ code, region })));
+
+    function codeToFlagEmoji(code) {
+      return code.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()));
+    }
+    const rand = (n) => Math.floor(Math.random() * n);
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=rand(i+1); [a[i],a[j]]=[a[j],a[i]] } return a; }
+
+    const store = {
+      get(){ try { return JSON.parse(localStorage.getItem('fg_stats')||'{}') } catch { return {} } },
+      set(d){ localStorage.setItem('fg_stats', JSON.stringify(d)) },
+      reset(){ localStorage.removeItem('fg_stats') }
+    };
+    function ensureStats() {
+      const s = store.get();
+      s.total ??= 0; s.correct ??= 0; s.streak ??= 0; s.bestStreak ??= 0; s.by ??= {};
+      store.set(s); return s;
+    }
+
+    async function saveProfileName(ctx, uid, name) {
+      if (!name) return;
+      try {
+        const now = ctx.serverTimestamp();
+        await ctx.setDoc(ctx.doc(ctx.db, 'profiles', uid), {
+          uid,
+          name,
+          createdAt: now,
+          updatedAt: now
+        }, { merge: true });
+      } catch (error) {
+        console.error('儲存使用者名稱失敗:', error);
+        showNotification('無法儲存使用者資料，請稍後再試', 'error');
+      }
+    }
+
+    async function augmentWithNames(ctx, rows) {
+      const uids = [...new Set(rows.map(r => r.uid).filter(Boolean))];
+      if (!uids.length) return rows;
+      try {
+        const entries = await Promise.all(uids.map(async (uid) => {
+          try {
+            const snap = await ctx.getDoc(ctx.doc(ctx.db, 'profiles', uid));
+            return [uid, snap.exists() ? (snap.data().name || '') : ''];
+          } catch (error) {
+            console.error(`取得使用者 ${uid} 資料失敗:`, error);
+            return [uid, ''];
+          }
+        }));
+        const nameMap = Object.fromEntries(entries);
+        return rows.map(r => ({ ...r, name: nameMap[r.uid] || '' }));
+      } catch (error) {
+        console.error('處理使用者名稱失敗:', error);
+        return rows;
+      }
+    }
+
+    function showAuth(show = true) {
+      els.authModal.classList[show ? 'add' : 'remove']('show');
+      if (show) {
+        els.authModal.setAttribute('aria-hidden', 'false');
+        els.nicknameInput.focus();
+      } else {
+        els.authModal.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    function showNotification(message, type = 'info') {
+      // 簡單的通知系統，可以進一步擴充
+      els.hint.textContent = message;
+      if (type === 'error') {
+        console.error(message);
+      }
+    }
+
+    function labelForUser(user) {
+      if (!user) return '訪客';
+      if (user.isAnonymous) return '訪客';
+      if (user.displayName) return user.displayName;
+      if (user.email) return user.email.split('@')[0];
+      return user.uid.slice(-6);
+    }
+
+    function bindAuthUI(ctx) {
+      const {
+        auth,
+        signInAnonymously,
+        signOut,
+        signInWithPopup,
+        GoogleAuthProvider,
+        onAuthStateChanged
+      } = ctx;
+
+      let initial = true;
+      onAuthStateChanged(auth, async (user) => {
+        if (initial && !user) {
+          initial = false;
+          try {
+            await signInAnonymously(auth);
+          } catch (err) {
+            console.error('匿名登入失敗:', err);
+          }
+          return;
+        }
+        initial = false;
+        els.userLabel.textContent = labelForUser(user);
+        const loggedIn = !!user && !user.isAnonymous;
+        els.loginBtn.style.display = loggedIn ? 'none' : '';
+        els.logoutBtn.style.display = loggedIn ? '' : 'none';
+        if (loggedIn) {
+          const nickname = els.nicknameInput.value.trim();
+          if (nickname) await saveProfileName(ctx, user.uid, nickname);
+        }
+        showAuth(false);
+      });
+
+      els.loginBtn.onclick = () => showAuth(true);
+      els.closeAuth.onclick = () => showAuth(false);
+      els.logoutBtn.onclick = () => {
+        signOut(auth).catch(err => console.error('登出失敗:', err));
+      };
+      els.guestContinue.onclick = async () => {
+        if (!auth.currentUser || !auth.currentUser.isAnonymous) {
+          await signInAnonymously(auth).catch(err => showNotification(`匿名登入失敗：${err.message}`, 'error'));
+        }
+        showAuth(false);
+      };
+      els.googleLogin.onclick = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+          const cred = await signInWithPopup(auth, provider);
+          const nickname = (els.nicknameInput.value.trim() || cred.user.displayName || '').slice(0, 24);
+          if (nickname) await saveProfileName(ctx, cred.user.uid, nickname);
+        } catch (err) {
+          console.error('Google 登入失敗:', err);
+          showNotification(`登入失敗：${err.message}`, 'error');
+        }
+      };
+    }
+
+    function weightFor(code, mode) {
+      const s = store.get(); const c = (s.by?.[code]) || {};
+      const seen = c.seen || 0, wrong = c.wrong || 0, streak = c.streak || 0, score = c.score ?? 0;
+      let w = 1 + wrong*2 + Math.max(0, 3 - streak) - Math.min(score, 2)*0.5;
+      if (seen < 2) w += 0.4;
+      if (mode === 'train') w *= 1.6;
+      return Math.max(0.2, w);
+    }
+    function weightedPick(items, wfn) {
+      const weights = items.map(wfn);
+      const sum = weights.reduce((a,b)=>a+b,0) || items.length;
+      let r = Math.random() * sum;
+      for (let i=0;i<items.length;i++){ if ((r -= weights[i]) <= 0) return items[i]; }
+      return items[items.length-1];
+    }
+    function getPool(region) {
+      return region==='global' ? COUNTRIES.slice() : COUNTRIES.filter(c => c.region === region);
+    }
+    function fillTo(a, need, supply, excludeSet) {
+      for (const x of supply) { if (a.length >= need) break; if (!excludeSet.has(x.code)) a.push(x); }
+      return a;
+    }
+    function getDecoys(pool, correct, difficulty) {
+      const exclude = new Set([correct.code]);
+      let primary, fallback;
+      if (difficulty === 'easy') {
+        primary = pool.filter(c => c.region !== correct.region && c.code !== correct.code);
+        fallback = pool.filter(c => c.code !== correct.code);
+      } else if (difficulty === 'hard') {
+        primary = pool.filter(c => c.region === correct.region && c.code !== correct.code);
+        fallback = pool.filter(c => c.code !== correct.code);
+      } else {
+        primary = pool.filter(c => c.code !== correct.code);
+        fallback = primary;
+      }
+      let picks = shuffle(primary).slice(0, 3);
+      if (picks.length < 3) picks = fillTo(picks, 3, shuffle(fallback), exclude);
+      return picks;
+    }
+
+    let current = null;
+    let lock = false;
+    let mode = 'normal';
+
+    const els = {
+      region: document.getElementById('region'),
+      difficulty: document.getElementById('difficulty'),
+      mode: document.getElementById('mode'),
+      reset: document.getElementById('reset'),
+      flag: document.getElementById('flag'),
+      flagBox: document.getElementById('flagBox'),
+      options: document.getElementById('options'),
+      hint: document.getElementById('hint'),
+      next: document.getElementById('next'),
+      acc: document.getElementById('acc'),
+      streak: document.getElementById('streak'),
+      total: document.getElementById('total'),
+      stats: document.getElementById('stats'),
+      board: document.getElementById('board'),
+      statsModal: document.getElementById('statsModal'),
+      closeStats: document.getElementById('closeStats'),
+      s_acc: document.getElementById('s_acc'),
+      s_best: document.getElementById('s_best'),
+      s_total: document.getElementById('s_total'),
+      wrongList: document.getElementById('wrongList'),
+      card: document.getElementById('card'),
+      fx: document.getElementById('fx'),
+      boardModal: document.getElementById('boardModal'),
+      closeBoard: document.getElementById('closeBoard'),
+      boardList: document.getElementById('boardList'),
+      userLabel: document.getElementById('userLabel'),
+      loginBtn: document.getElementById('loginBtn'),
+      logoutBtn: document.getElementById('logoutBtn'),
+      authModal: document.getElementById('authModal'),
+      closeAuth: document.getElementById('closeAuth'),
+      googleLogin: document.getElementById('googleLogin'),
+      guestContinue: document.getElementById('guestContinue'),
+      nicknameInput: document.getElementById('nickname')
+    };
+
+    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const ctx = els.fx.getContext('2d');
+    let particles = [];
+    function resizeCanvas(){ els.fx.width = innerWidth; els.fx.height = innerHeight; }
+    addEventListener('resize', resizeCanvas, {passive:true}); resizeCanvas();
+    function spawnConfetti(amount=60) {
+      if (prefersReduced) return;
+      const colors = ['#6ee7b7','#8ab4ff','#ffd166','#ff6b6b','#c084fc','#f472b6'];
+      const rect = els.flagBox.getBoundingClientRect();
+      const cx = rect.left + rect.width/2;
+      const top = rect.top;
+      for (let i=0;i<amount;i++){
+        particles.push({
+          x: cx + (Math.random() - .5) * rect.width * 0.6,
+          y: top - 10 + Math.random()*10,
+          vx: (Math.random() - .5) * 4,
+          vy: 2 + Math.random() * 3,
+          g: .08 + Math.random() * .08,
+          a: 1, r: 2 + Math.random() * 3,
+          c: colors[rand(colors.length)], ttl: 90 + rand(40)
+        });
+      }
+    }
+    function tick() {
+      ctx.clearRect(0,0,els.fx.width,els.fx.height);
+      
+      // 如果沒有粒子，停止動畫循環以節省效能
+      if (particles.length === 0) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      
+      for (let i=particles.length-1;i>=0;i--){
+        const p = particles[i];
+        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.ttl--;
+        p.a = Math.max(0, p.ttl/120);
+        ctx.globalAlpha = p.a; ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+        if (p.ttl <= 0 || p.y > innerHeight+20) particles.splice(i,1);
+      }
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    function vibrate(pattern){ if (navigator.vibrate) try { navigator.vibrate(pattern) } catch {} }
+
+    function updateHUD() {
+      const s = store.get();
+      const acc = s.total ? Math.round(s.correct / s.total * 100) : 0;
+      els.acc.textContent = acc + '%';
+      els.streak.textContent = s.streak || 0;
+      els.total.textContent = s.total || 0;
+    }
+
+    function updateStatsModal() {
+      const s = store.get();
+      const acc = s.total ? Math.round(s.correct / s.total * 100) : 0;
+      els.s_acc.textContent = acc + '%';
+      els.s_best.textContent = s.bestStreak || 0;
+      els.s_total.textContent = s.total || 0;
+      const items = Object.entries(s.by || {})
+        .map(([code, v]) => ({ code, wrong: v.wrong||0, seen: v.seen||0 }))
+        .filter(x => x.wrong > 0)
+        .sort((a,b)=> (b.wrong/(b.seen||1)) - (a.wrong/(a.seen||1)))
+        .slice(0, 12);
+      els.wrongList.innerHTML = items.length ? items.map(it => {
+        const name = IntlNames.of(it.code);
+        const rate = it.seen ? Math.round((1 - it.wrong/it.seen)*100) : 0;
+        return `<div class="item"><span>${codeToFlagEmoji(it.code)} ${name}</span><span>錯 ${it.wrong}｜正確率 ${rate}%</span></div>`;
+      }).join('') : '<div class="item">目前沒有錯題紀錄</div>';
+    }
+
+    function pickQuestion() {
+      const region = els.region.value;
+      const pool = getPool(region);
+      let candidates = pool;
+      if (mode === 'train') {
+        const s = store.get();
+        const wrongOnes = pool.filter(c => (s.by?.[c.code]?.wrong || 0) > 0);
+        if (wrongOnes.length) candidates = wrongOnes;
+      }
+      const correct = weightedPick(candidates, c => weightFor(c.code, mode));
+      const decoys = getDecoys(pool, correct, els.difficulty.value);
+      const options = shuffle([correct, ...decoys]).map(x => x.code);
+      return { correct: correct.code, options, region };
+    }
+
+    function renderQuestion() {
+      current = pickQuestion();
+      els.flag.textContent = codeToFlagEmoji(current.correct);
+      els.hint.textContent = '請選出正確的國家名稱';
+      els.options.innerHTML = '';
+      els.card.classList.remove('shake','celebrate');
+      
+      // 更新 aria-label 讓螢幕閱讀器知道旗幟已更新
+      els.flagBox.setAttribute('aria-label', `國旗：${IntlNames.of(current.correct)}`);
+      
+      const frag = document.createDocumentFragment();
+      current.options.forEach((optCode, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'opt';
+        btn.dataset.code = optCode;
+        btn.textContent = IntlNames.of(optCode);
+        btn.setAttribute('aria-label', `選項 ${index + 1}：${IntlNames.of(optCode)}`);
+        btn.onclick = () => answer(optCode);
+        frag.appendChild(btn);
+      });
+      els.options.appendChild(frag);
+    }
+
+    function answer(chosen) {
+      if (lock) return;
+      lock = true;
+      const s = ensureStats();
+      s.total = (s.total || 0) + 1;
+      const correct = chosen === current.correct;
+      [...els.options.children].forEach(b => {
+        const code = b.dataset.code;
+        if (code === current.correct) b.classList.add('correct');
+        if (code === chosen && !correct) b.classList.add('wrong');
+        b.disabled = true;
+      });
+      const cc = current.correct;
+      s.by[cc] ??= { seen:0, wrong:0, streak:0, score:0 };
+      const cs = s.by[cc];
+      cs.seen += 1;
+      if (correct) {
+        s.correct = (s.correct || 0) + 1;
+        s.streak = (s.streak || 0) + 1;
+        s.bestStreak = Math.max(s.bestStreak || 0, s.streak);
+        cs.streak = (cs.streak || 0) + 1;
+        cs.score = (cs.score ?? 0) + 1;
+        els.card.classList.add('celebrate');
+        spawnConfetti(70 + Math.min(60, (s.streak||0) * 5));
+        vibrate(30);
+        els.hint.textContent = '正確！';
+      } else {
+        s.streak = 0;
+        cs.wrong = (cs.wrong || 0) + 1;
+        cs.streak = 0;
+        cs.score = Math.max(0, (cs.score ?? 0) - 1);
+        els.card.classList.add('shake');
+        vibrate([20, 80, 20]);
+        els.hint.textContent = `答錯啦，正解：${IntlNames.of(cc)}`;
+      }
+      store.set(s);
+      updateHUD();
+    }
+
+    function nextQuestion() { lock = false; renderQuestion(); }
+
+    els.next.onclick = () => nextQuestion();
+    els.region.onchange = () => nextQuestion();
+    els.difficulty.onchange = () => nextQuestion();
+    els.reset.onclick = () => {
+      if (confirm('確定要重置本機紀錄嗎？')) { store.reset(); ensureStats(); updateHUD(); nextQuestion(); }
+    };
+    els.stats.onclick = () => { updateStatsModal(); els.statsModal.classList.add('show'); };
+    els.closeStats.onclick = () => els.statsModal.classList.remove('show');
+    els.mode.onclick = () => {
+      mode = (mode === 'normal') ? 'train' : 'normal';
+      els.mode.textContent = '模式：' + (mode === 'normal' ? '一般' : '訓練');
+      nextQuestion();
+    };
+
+    const REGION_LABEL = {
+      global: '全球',
+      asia: '亞洲',
+      europe: '歐洲',
+      africa: '非洲',
+      americas: '美洲',
+      oceania: '大洋洲'
+    };
+
+    const firebaseConfig = window.__FLAG_APP_FIREBASE__ || {
+      apiKey: '',
+      authDomain: '',
+      projectId: '',
+      storageBucket: '',
+      messagingSenderId: '',
+      appId: '',
+      measurementId: ''
+    };
+    let fbInit;
+    function readyConfig(cfg){ return cfg.apiKey && cfg.projectId && cfg.appId && cfg.authDomain; }
+
+    async function ensureFirebase() {
+      if (!readyConfig(firebaseConfig)) {
+        alert('尚未設定 Firebase Config，請先填入 apiKey / authDomain / projectId / appId。');
+        throw new Error('missing firebaseConfig');
+      }
+      if (!fbInit) {
+        fbInit = (async () => {
+          const [
+            { initializeApp },
+            {
+              getAuth,
+              onAuthStateChanged,
+              signInAnonymously,
+              signInWithPopup,
+              GoogleAuthProvider,
+              signOut
+            },
+            {
+              getFirestore,
+              collection,
+              doc,
+              setDoc,
+              getDoc,
+              serverTimestamp,
+              query,
+              orderBy,
+              where,
+              limit,
+              getDocs
+            }
+          ] = await Promise.all([
+            import('https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js'),
+            import('https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js'),
+            import('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js')
+          ]);
+          const app = initializeApp(firebaseConfig);
+          const auth = getAuth(app);
+          const db = getFirestore(app);
+          if (location.protocol === 'https:' && firebaseConfig.measurementId) {
+            try {
+              const { getAnalytics, isSupported } = await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics.js');
+              if (await isSupported()) getAnalytics(app);
+            } catch (err) {
+              console.warn('analytics init skipped', err);
+            }
+          }
+          return {
+            app,
+            db,
+            auth,
+            onAuthStateChanged,
+            signInAnonymously,
+            signInWithPopup,
+            GoogleAuthProvider,
+            signOut,
+            collection,
+            doc,
+            setDoc,
+            getDoc,
+            serverTimestamp,
+            query,
+            orderBy,
+            where,
+            limit,
+            getDocs
+          };
+        })();
+      }
+      return fbInit;
+    }
+
+    async function submitScore() {
+      const s = store.get();
+      const acc = s.total ? Math.round(s.correct / s.total * 100) : 0;
+      const ctx = await ensureFirebase();
+      let user = ctx.auth.currentUser;
+      if (!user) {
+        try {
+          await ctx.signInAnonymously(ctx.auth);
+          user = ctx.auth.currentUser;
+        } catch (err) {
+          console.error('unable to obtain auth user', err);
+          return;
+        }
+      }
+      const uid = user?.uid;
+      if (!uid) return;
+      const region = els.region.value;
+      await ctx.setDoc(ctx.doc(ctx.db, 'scores', uid), {
+        uid,
+        bestStreak: s.bestStreak || 0,
+        accuracy: acc,
+        total: s.total || 0,
+        region,
+        ts: ctx.serverTimestamp()
+      }, { merge: true });
+      await ctx.setDoc(ctx.doc(ctx.db, 'scores_region', `${uid}_${region}`), {
+        uid,
+        bestStreak: s.bestStreak || 0,
+        accuracy: acc,
+        total: s.total || 0,
+        region,
+        ts: ctx.serverTimestamp()
+      }, { merge: true });
+    }
+
+    function renderBoard(globalRows, regionRows, regionKey) {
+      const toRow = (row, idx) => {
+        const place = idx + 1;
+        const name = row.name || (row.uid?.slice(-6) || 'Player');
+        return `<div class="item"><span>${place}. ${name}</span><span>連勝 ${row.bestStreak || 0}｜準確率 ${row.accuracy || 0}%｜題數 ${row.total || 0}</span></div>`;
+      };
+      const globalSection = globalRows.length
+        ? globalRows.map(toRow).join('')
+        : '<div class="item">目前沒有資料</div>';
+      const regionLabel = REGION_LABEL[regionKey] || '目前區域';
+      const regionSection = regionRows.length
+        ? regionRows.map(toRow).join('')
+        : '<div class="item">目前沒有資料</div>';
+      els.boardList.innerHTML = `
+        <div class="item"><strong>全球榜</strong></div>
+        ${globalSection}
+        <div class="item"><strong>${regionLabel}榜</strong></div>
+        ${regionSection}
+      `;
+    }
+
+    async function openLeaderboard() {
+      try {
+        const ctx = await ensureFirebase();
+        const { db, collection, query, orderBy, where, limit, getDocs } = ctx;
+        
+        // 顯示載入中提示
+        els.boardList.innerHTML = '<div class="item">載入中...</div>';
+        els.boardModal.classList.add('show');
+        
+        await submitScore();
+        const region = els.region.value;
+        const globalQ = query(collection(db, 'scores'), orderBy('bestStreak', 'desc'), limit(50));
+        const regionQ = query(
+          collection(db, 'scores_region'),
+          where('region', '==', region),
+          orderBy('bestStreak', 'desc'),
+          limit(50)
+        );
+        const [globalSnap, regionSnap] = await Promise.all([getDocs(globalQ), getDocs(regionQ)]);
+        const [globalRows, regionRows] = await Promise.all([
+          augmentWithNames(ctx, globalSnap.docs.map(d => d.data())),
+          augmentWithNames(ctx, regionSnap.docs.map(d => d.data()))
+        ]);
+        const sorter = (a, b) => {
+          if ((b.bestStreak || 0) !== (a.bestStreak || 0)) return (b.bestStreak || 0) - (a.bestStreak || 0);
+          return (b.accuracy || 0) - (a.accuracy || 0);
+        };
+        renderBoard(
+          globalRows.sort(sorter).slice(0, 20),
+          regionRows.sort(sorter).slice(0, 20),
+          region
+        );
+      } catch (err) {
+        console.error('載入排行榜失敗:', err);
+        els.boardList.innerHTML = '<div class="item">載入失敗，請稍後再試</div>';
+      }
+    }
+
+    els.board.onclick = () => openLeaderboard();
+    els.closeBoard.onclick = () => els.boardModal.classList.remove('show');
+
+    (async () => {
+      try {
+        const ctx = await ensureFirebase();
+        bindAuthUI(ctx);
+      } catch (err) {
+        console.error('Auth init failed', err);
+      }
+    })();
+
+    ensureStats(); updateHUD(); nextQuestion();
+    addEventListener('keydown', (e) => {
+      if (e.key >= '1' && e.key <= '4') {
+        const idx = parseInt(e.key, 10) - 1;
+        const btn = els.options.children[idx];
+        if (btn && !lock) btn.click();
+      }
+      if (e.key === 'Enter') els.next.click();
+    });
+  </script>
+</body>
+</html>
