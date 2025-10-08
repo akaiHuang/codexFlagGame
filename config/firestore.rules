@@ -55,10 +55,13 @@ service cloud.firestore {
       allow read: if true;
       
       // 🔒 僅限擁有者寫入，驗證資料
+      // userRegionId 格式: {uid}_{region}
+      // region 可以是: global, asia, europe, africa, americas, oceania
       allow write: if isSignedIn() && 
-        userRegionId.matches('^' + request.auth.uid + '_[A-Z]{2}$') &&
+        userRegionId.matches('^' + request.auth.uid + '_(global|asia|europe|africa|americas|oceania)$') &&
         isValidScoreData() &&
-        request.resource.data.region is string;
+        request.resource.data.region is string &&
+        request.resource.data.region.matches('^(global|asia|europe|africa|americas|oceania)$');
     }
     
     // 拒絕其他所有存取
