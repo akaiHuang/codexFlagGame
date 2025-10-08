@@ -6,10 +6,8 @@
       "**/.*",
       "**/node_modules/**",
       "**/*.md",
-      "storage.js",
-      "firebase.js",
-      "game.js",
-      "particles.js"
+      "src/",
+      "docs/"
     ],
     "rewrites": [
       {
