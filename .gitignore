@@ -13,10 +13,12 @@ yarn-error.log*
 
 # Firebase
 .firebase/
-.firebaserc
 firebase-debug.log
 firestore-debug.log
 firebase.config.js
+ui-debug.log
+database-debug.log
+hosting-debug.log
 
 # 編輯器
 .vscode/
