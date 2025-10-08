@@ -80,13 +80,14 @@
       position: absolute;
       inset: 0;
       display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
+      flex-wrap: nowrap;
+      gap: 3px;
       padding: 20px;
-      animation: scroll-left 60s linear infinite;
+      animation: scroll-left 80s linear infinite;
+      width: 200%;
     }
     .flag-bg .flag-item {
-      font-size: 80px;
+      font-size: 160px;
       line-height: 1;
       flex-shrink: 0;
       opacity: 0.6;
@@ -229,9 +230,6 @@
           開始遊戲
           <div class="home-btn-subtitle">Login by Google</div>
         </button>
-        <button id="startAsGuest" class="home-btn secondary">
-          訪客模式
-        </button>
       </div>
     </div>
   </div>
@@ -333,7 +331,6 @@
     const homePage = document.getElementById('homePage');
     const gamePage = document.getElementById('gamePage');
     const startWithLogin = document.getElementById('startWithLogin');
-    const startAsGuest = document.getElementById('startAsGuest');
     
     function showGame() {
       homePage.classList.add('hidden');
@@ -473,15 +470,6 @@
       startWithLogin.onclick = () => {
         showGame();
         showAuth(true); // 顯示登入視窗
-      };
-      
-      startAsGuest.onclick = async () => {
-        try {
-          await signInAnonymously(auth);
-          showGame();
-        } catch (err) {
-          showNotification(`無法啟動遊戲：${err.message}`, 'error');
-        }
       };
       
       // 遊戲標題點擊返回首頁
