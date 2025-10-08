@@ -36,11 +36,11 @@
     }
     .flag-box {
       aspect-ratio: 4/3; border-radius: 12px; background: #0a0f24; border: 1px solid #2a315a;
-      display:flex; align-items:center; justify-content:center; overflow:hidden; position: relative;
+      display:flex; align-items:center; justify-content:center; overflow:hidden; position: relative; z-index: 100;
     }
     .flag-box .flag { font-size: clamp(72px, 22vw, 140px); line-height:1; position: relative; z-index: 1; }
     .progress-badge {
-      position: absolute; bottom: 12px; right: 12px; z-index: 999;
+      position: absolute; bottom: 12px; right: 12px; z-index: 10;
       background: rgba(10, 15, 36, 0.9); backdrop-filter: blur(8px);
       box-shadow: 0 4px 12px rgba(0,0,0,.4);
     }
@@ -62,7 +62,7 @@
     @media (prefers-reduced-motion: reduce) { .shake, .celebrate { animation: none !important; } }
     .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 20px; }
-    .modal.show { display:flex; }
+    .modal.show { display:flex; z-index: 200; }
     .sheet { width:min(640px,100%); background:#0f132e; border:1px solid #2a315a; border-radius:16px; padding:16px; }
     .sheet h3 { margin:4px 0 10px }
     .table { font-size:14px; color:var(--muted); margin-top:8px; }
@@ -392,10 +392,24 @@
     
     // 稍後會加入 gameTitle 的點擊事件
     
-    const IntlNames = (() => {
-      try { return new Intl.DisplayNames(['zh-Hant'], { type: 'region' }); }
-      catch { return { of: (code) => code }; }
-    })();
+    // 語言代碼映射到 Intl.DisplayNames 支援的 locale
+    const langToLocale = {
+      'zh-TW': 'zh-Hant',
+      'zh-CN': 'zh-Hans',
+      'en': 'en',
+      'ja': 'ja'
+    };
+
+    // 動態獲取國家名稱（根據當前語言）
+    function getCountryName(code) {
+      try {
+        const locale = langToLocale[currentLang] || 'zh-Hant';
+        const intl = new Intl.DisplayNames([locale], { type: 'region' });
+        return intl.of(code) || code;
+      } catch {
+        return code;
+      }
+    }
 
     const R = { AS:'asia', EU:'europe', AF:'africa', AM:'americas', OC:'oceania' };
     const RAW = {
@@ -719,7 +733,7 @@
         .sort((a,b)=> (b.wrong/(b.seen||1)) - (a.wrong/(a.seen||1)))
         .slice(0, 12);
       els.wrongList.innerHTML = items.length ? items.map(it => {
-        const name = IntlNames.of(it.code);
+        const name = getCountryName(it.code);
         const rate = it.seen ? Math.round((1 - it.wrong/it.seen)*100) : 0;
         return `<div class="item"><span>${codeToFlagEmoji(it.code)} ${name}</span><span>錯 ${it.wrong}｜正確率 ${rate}%</span></div>`;
       }).join('') : '<div class="item">目前沒有錯題紀錄</div>';
@@ -743,20 +757,20 @@
     function renderQuestion() {
       current = pickQuestion();
       els.flag.textContent = codeToFlagEmoji(current.correct);
-      els.hint.textContent = '請選出正確的國家名稱';
+      els.hint.textContent = t('hint');
       els.options.innerHTML = '';
       els.card.classList.remove('shake','celebrate');
       
       // 更新 aria-label 讓螢幕閱讀器知道旗幟已更新
-      els.flagBox.setAttribute('aria-label', `國旗：${IntlNames.of(current.correct)}`);
+      els.flagBox.setAttribute('aria-label', `國旗：${getCountryName(current.correct)}`);
       
       const frag = document.createDocumentFragment();
       current.options.forEach((optCode, index) => {
         const btn = document.createElement('button');
         btn.className = 'opt';
         btn.dataset.code = optCode;
-        btn.textContent = IntlNames.of(optCode);
-        btn.setAttribute('aria-label', `選項 ${index + 1}：${IntlNames.of(optCode)}`);
+        btn.textContent = getCountryName(optCode);
+        btn.setAttribute('aria-label', `選項 ${index + 1}：${getCountryName(optCode)}`);
         btn.onclick = () => answer(optCode);
         frag.appendChild(btn);
       });
@@ -793,7 +807,7 @@
         els.card.classList.add('celebrate');
         spawnConfetti(70 + Math.min(60, (s.streak||0) * 5));
         vibrate(30);
-        els.hint.textContent = '正確！';
+        els.hint.textContent = t('correct');
       } else {
         s.streak = 0;
         cs.wrong = (cs.wrong || 0) + 1;
@@ -801,7 +815,7 @@
         cs.score = Math.max(0, (cs.score ?? 0) - 1);
         els.card.classList.add('shake');
         vibrate([20, 80, 20]);
-        els.hint.textContent = `答錯啦，正解：${IntlNames.of(cc)}`;
+        els.hint.textContent = t('wrong') + getCountryName(cc);
       }
       store.set(s);
       updateHUD();
@@ -875,7 +889,10 @@
         bestStreak: '最佳連勝',
         totalQuestions: '累計題數',
         wrongAnswers: '答錯記錄',
-        leaderboardTitle: '排行榜'
+        leaderboardTitle: '排行榜',
+        // 遊戲訊息
+        correct: '正確！',
+        wrong: '答錯啦，正解：'
       },
       'zh-CN': {
         homeTitle: '世界国旗挑战',
@@ -918,7 +935,10 @@
         bestStreak: '最佳连胜',
         totalQuestions: '累计题数',
         wrongAnswers: '答错记录',
-        leaderboardTitle: '排行榜'
+        leaderboardTitle: '排行榜',
+        // 遊戲訊息
+        correct: '正确！',
+        wrong: '答错了，正解：'
       },
       'en': {
         homeTitle: 'World Flag Challenge',
@@ -961,7 +981,10 @@
         bestStreak: 'Best Streak',
         totalQuestions: 'Total Questions',
         wrongAnswers: 'Wrong Answers',
-        leaderboardTitle: 'Leaderboard'
+        leaderboardTitle: 'Leaderboard',
+        // Game messages
+        correct: 'Correct!',
+        wrong: 'Wrong! Answer: '
       },
       'ja': {
         homeTitle: '世界の国旗チャレンジ',
@@ -1004,7 +1027,10 @@
         bestStreak: '最高連勝',
         totalQuestions: '総問題数',
         wrongAnswers: '間違えた問題',
-        leaderboardTitle: 'ランキング'
+        leaderboardTitle: 'ランキング',
+        // ゲームメッセージ
+        correct: '正解！',
+        wrong: '不正解！正解：'
       }
     };
 
@@ -1021,6 +1047,21 @@
       document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === lang);
       });
+      
+      // 如果當前有題目顯示，重新渲染以更新國家名稱
+      if (current && !gamePage.classList.contains('hidden')) {
+        // 重新渲染選項按鈕的文字
+        const optionButtons = els.options.querySelectorAll('.opt');
+        optionButtons.forEach(btn => {
+          const code = btn.dataset.code;
+          btn.textContent = getCountryName(code);
+          const index = Array.from(optionButtons).indexOf(btn);
+          btn.setAttribute('aria-label', `選項 ${index + 1}：${getCountryName(code)}`);
+        });
+        
+        // 更新國旗的 aria-label
+        els.flagBox.setAttribute('aria-label', `國旗：${getCountryName(current.correct)}`);
+      }
     }
 
     // 獲取翻譯文字
