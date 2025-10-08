@@ -63,12 +63,184 @@
     .table { font-size:14px; color:var(--muted); margin-top:8px; }
     .table .item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #243058; }
     canvas#fx { position: fixed; inset: 0; pointer-events: none; }
+    
+    /* 首頁樣式 */
+    #homePage {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #homePage.hidden { display: none; }
+    
+    /* 國旗背景動畫 */
+    .flag-bg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 20px;
+      animation: scroll-left 60s linear infinite;
+    }
+    .flag-bg .flag-item {
+      font-size: 80px;
+      line-height: 1;
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+    @keyframes scroll-left {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    
+    /* 半透明黑色 + 高斯模糊遮罩 */
+    .home-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    
+    /* 首頁內容 */
+    .home-content {
+      position: relative;
+      text-align: center;
+      padding: 40px 20px;
+      max-width: 500px;
+    }
+    .home-title {
+      font-size: clamp(32px, 8vw, 56px);
+      font-weight: 700;
+      margin: 0 0 20px;
+      background: linear-gradient(135deg, #6ee7b7, #8ab4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+    }
+    .home-subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 40px;
+    }
+    .home-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+    }
+    .home-btn {
+      width: 280px;
+      padding: 16px 32px;
+      font-size: 18px;
+      font-weight: 600;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .home-btn:active { transform: scale(0.98); }
+    .home-btn.primary {
+      background: linear-gradient(135deg, #2a7f72, #26a69a);
+      color: white;
+      box-shadow: 0 8px 24px rgba(42, 127, 114, 0.3);
+    }
+    .home-btn.primary:hover {
+      box-shadow: 0 12px 32px rgba(42, 127, 114, 0.4);
+    }
+    .home-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+    }
+    .home-btn-subtitle {
+      font-size: 12px;
+      font-weight: 400;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+    
+    /* 遊戲頁面 */
+    #gamePage.hidden { display: none; }
   </style>
 </head>
 <body>
+  <!-- 首頁 -->
+  <div id="homePage">
+    <!-- 國旗背景 -->
+    <div class="flag-bg">
+      <span class="flag-item">🇯🇵</span>
+      <span class="flag-item">🇰🇷</span>
+      <span class="flag-item">🇨🇳</span>
+      <span class="flag-item">🇺🇸</span>
+      <span class="flag-item">🇬🇧</span>
+      <span class="flag-item">🇫🇷</span>
+      <span class="flag-item">🇩🇪</span>
+      <span class="flag-item">🇮🇹</span>
+      <span class="flag-item">🇪🇸</span>
+      <span class="flag-item">🇷🇺</span>
+      <span class="flag-item">🇧🇷</span>
+      <span class="flag-item">🇲🇽</span>
+      <span class="flag-item">🇦🇺</span>
+      <span class="flag-item">🇨🇦</span>
+      <span class="flag-item">🇮🇳</span>
+      <span class="flag-item">🇹🇭</span>
+      <span class="flag-item">🇻🇳</span>
+      <span class="flag-item">🇵🇭</span>
+      <span class="flag-item">🇮🇩</span>
+      <span class="flag-item">🇸🇬</span>
+      <!-- 複製一組實現無縫循環 -->
+      <span class="flag-item">🇯🇵</span>
+      <span class="flag-item">🇰🇷</span>
+      <span class="flag-item">🇨🇳</span>
+      <span class="flag-item">🇺🇸</span>
+      <span class="flag-item">🇬🇧</span>
+      <span class="flag-item">🇫🇷</span>
+      <span class="flag-item">🇩🇪</span>
+      <span class="flag-item">🇮🇹</span>
+      <span class="flag-item">🇪🇸</span>
+      <span class="flag-item">🇷🇺</span>
+      <span class="flag-item">🇧🇷</span>
+      <span class="flag-item">🇲🇽</span>
+      <span class="flag-item">🇦🇺</span>
+      <span class="flag-item">🇨🇦</span>
+      <span class="flag-item">🇮🇳</span>
+      <span class="flag-item">🇹🇭</span>
+      <span class="flag-item">🇻🇳</span>
+      <span class="flag-item">🇵🇭</span>
+      <span class="flag-item">🇮🇩</span>
+      <span class="flag-item">🇸🇬</span>
+    </div>
+    
+    <!-- 半透明黑色 + 高斯模糊遮罩 -->
+    <div class="home-overlay"></div>
+    
+    <!-- 首頁內容 -->
+    <div class="home-content">
+      <h1 class="home-title">世界國旗挑戰</h1>
+      <p class="home-subtitle">測試你對世界各國國旗的認識</p>
+      <div class="home-buttons">
+        <button id="startWithLogin" class="home-btn primary">
+          開始遊戲
+          <div class="home-btn-subtitle">Login by Google</div>
+        </button>
+        <button id="startAsGuest" class="home-btn secondary">
+          訪客模式
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 遊戲頁面 -->
+  <div id="gamePage" class="hidden">
   <div class="wrap">
     <header>
-      <h1>世界國旗挑戰</h1>
+      <h1 id="gameTitle" style="cursor: pointer;">世界國旗挑戰</h1>
       <div class="controls">
         <select id="region" aria-label="選擇地區">
           <option value="global">全球</option>
@@ -86,8 +258,6 @@
         <button id="mode" class="ghost" aria-label="切換遊戲模式">模式：一般</button>
         <button id="reset" class="ghost" aria-label="重置遊戲紀錄">重置紀錄</button>
         <span id="userLabel" class="pill" aria-label="當前使用者">訪客</span>
-        <button id="loginBtn" class="ghost" aria-label="開啟登入對話框">登入</button>
-        <button id="logoutBtn" class="ghost" style="display:none" aria-label="登出帳號">登出</button>
       </div>
     </header>
 
@@ -159,6 +329,24 @@
   </div>
 
   <script>
+    // 頁面切換邏輯
+    const homePage = document.getElementById('homePage');
+    const gamePage = document.getElementById('gamePage');
+    const startWithLogin = document.getElementById('startWithLogin');
+    const startAsGuest = document.getElementById('startAsGuest');
+    
+    function showGame() {
+      homePage.classList.add('hidden');
+      gamePage.classList.remove('hidden');
+    }
+    
+    function showHome() {
+      gamePage.classList.add('hidden');
+      homePage.classList.remove('hidden');
+    }
+    
+    // 稍後會加入 gameTitle 的點擊事件
+    
     const IntlNames = (() => {
       try { return new Intl.DisplayNames(['zh-Hant'], { type: 'region' }); }
       catch { return { of: (code) => code }; }
@@ -269,18 +457,11 @@
       onAuthStateChanged(auth, async (user) => {
         if (initial && !user) {
           initial = false;
-          try {
-            await signInAnonymously(auth);
-          } catch (err) {
-            console.error('匿名登入失敗:', err);
-          }
-          return;
+          return; // 不自動匿名登入，等待使用者選擇
         }
         initial = false;
         els.userLabel.textContent = labelForUser(user);
         const loggedIn = !!user && !user.isAnonymous;
-        els.loginBtn.style.display = loggedIn ? 'none' : '';
-        els.logoutBtn.style.display = loggedIn ? '' : 'none';
         if (loggedIn) {
           const nickname = els.nicknameInput.value.trim();
           if (nickname) await saveProfileName(ctx, user.uid, nickname);
@@ -288,11 +469,25 @@
         showAuth(false);
       });
 
-      els.loginBtn.onclick = () => showAuth(true);
-      els.closeAuth.onclick = () => showAuth(false);
-      els.logoutBtn.onclick = () => {
-        signOut(auth).catch(err => console.error('登出失敗:', err));
+      // 首頁按鈕
+      startWithLogin.onclick = () => {
+        showGame();
+        showAuth(true); // 顯示登入視窗
       };
+      
+      startAsGuest.onclick = async () => {
+        try {
+          await signInAnonymously(auth);
+          showGame();
+        } catch (err) {
+          showNotification(`無法啟動遊戲：${err.message}`, 'error');
+        }
+      };
+      
+      // 遊戲標題點擊返回首頁
+      els.gameTitle.onclick = () => showHome();
+
+      els.closeAuth.onclick = () => showAuth(false);
       els.guestContinue.onclick = async () => {
         if (!auth.currentUser || !auth.currentUser.isAnonymous) {
           await signInAnonymously(auth).catch(err => showNotification(`匿名登入失敗：${err.message}`, 'error'));
@@ -357,6 +552,7 @@
     let mode = 'normal';
 
     const els = {
+      gameTitle: document.getElementById('gameTitle'),
       region: document.getElementById('region'),
       difficulty: document.getElementById('difficulty'),
       mode: document.getElementById('mode'),
@@ -383,8 +579,6 @@
       closeBoard: document.getElementById('closeBoard'),
       boardList: document.getElementById('boardList'),
       userLabel: document.getElementById('userLabel'),
-      loginBtn: document.getElementById('loginBtn'),
-      logoutBtn: document.getElementById('logoutBtn'),
       authModal: document.getElementById('authModal'),
       closeAuth: document.getElementById('closeAuth'),
       googleLogin: document.getElementById('googleLogin'),
@@ -756,5 +950,7 @@
       if (e.key === 'Enter') els.next.click();
     });
   </script>
+  </div>
+  <!-- 遊戲頁面結束 -->
 </body>
 </html>
