@@ -36,9 +36,14 @@
     }
     .flag-box {
       aspect-ratio: 4/3; border-radius: 12px; background: #0a0f24; border: 1px solid #2a315a;
-      display:flex; align-items:center; justify-content:center; overflow:hidden;
+      display:flex; align-items:center; justify-content:center; overflow:hidden; position: relative;
     }
     .flag-box .flag { font-size: clamp(72px, 22vw, 140px); line-height:1; }
+    .progress-badge {
+      position: absolute; bottom: 12px; right: 12px; z-index: 10;
+      background: rgba(10, 15, 36, 0.9); backdrop-filter: blur(8px);
+      box-shadow: 0 4px 12px rgba(0,0,0,.4);
+    }
     .hint { color: var(--muted); font-size:13px; margin-top:6px }
     .options { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:14px; }
     .opt {
@@ -264,6 +269,7 @@
       <div id="card" class="card">
         <div class="flag-box" id="flagBox" role="img" aria-label="當前國旗">
           <div id="flag" class="flag">🏳️‍🌈</div>
+          <span class="progress-badge pill" aria-label="答對進度">已答對 <b id="correctCount">0</b>/<b id="totalFlags">0</b></span>
         </div>
         <div class="hint" id="hint" aria-live="polite">請選出正確的國家名稱</div>
         <div class="options" id="options" role="group" aria-label="答案選項"></div>
@@ -272,7 +278,6 @@
             <span class="pill" aria-label="當前正確率">正確率 <b id="acc">0%</b></span>
             <span class="pill" aria-label="當前連勝數">連勝 <b id="streak">0</b></span>
             <span class="pill" aria-label="累積總題數">總題數 <b id="total">0</b></span>
-            <span class="pill" aria-label="答對進度">已答對 <b id="correctCount">0</b>/<b id="totalFlags">0</b></span>
           </div>
           <div class="row">
             <button id="next" class="primary" aria-label="進入下一題">下一題 ▶</button>
