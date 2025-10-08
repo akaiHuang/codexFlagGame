@@ -168,17 +168,55 @@
     .home-btn-subtitle {
       font-size: 12px;
       font-weight: 400;
-      opacity: 0.7;
+      opacity: 0.8;
       margin-top: 4px;
     }
     
-    /* 遊戲頁面 */
-    #gamePage.hidden { display: none; }
+    /* 語言切換器 */
+    .lang-switcher {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      gap: 8px;
+      background: rgba(22, 26, 43, 0.8);
+      backdrop-filter: blur(10px);
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .lang-btn {
+      font-size: 28px;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: all 0.2s;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+    }
+    .lang-btn:hover {
+      opacity: 0.8;
+      transform: scale(1.1);
+    }
+    .lang-btn.active {
+      opacity: 1;
+      background: rgba(42, 127, 114, 0.3);
+    }
   </style>
 </head>
 <body>
   <!-- 首頁 -->
   <div id="homePage">
+    <!-- 語言切換器 -->
+    <div class="lang-switcher">
+      <button class="lang-btn active" data-lang="zh-TW" title="繁體中文">🇹🇼</button>
+      <button class="lang-btn" data-lang="zh-CN" title="简体中文">🇨🇳</button>
+      <button class="lang-btn" data-lang="en" title="English">🇬🇧</button>
+      <button class="lang-btn" data-lang="ja" title="日本語">🇯🇵</button>
+    </div>
+    
     <!-- 國旗背景 -->
     <div class="flag-bg">
       <span class="flag-item">🇯🇵</span>
@@ -269,15 +307,15 @@
       <div id="card" class="card">
         <div class="flag-box" id="flagBox" role="img" aria-label="當前國旗">
           <div id="flag" class="flag">🏳️‍🌈</div>
-          <span class="progress-badge pill" aria-label="答對進度">已答對 <b id="correctCount">0</b>/<b id="totalFlags">0</b></span>
+          <span class="progress-badge pill" aria-label="答對進度"><span data-i18n="answered">已答對</span> <b id="correctCount">0</b>/<b id="totalFlags">0</b></span>
         </div>
         <div class="hint" id="hint" aria-live="polite">請選出正確的國家名稱</div>
         <div class="options" id="options" role="group" aria-label="答案選項"></div>
         <div class="bar">
           <div class="stat">
-            <span class="pill" aria-label="當前正確率">正確率 <b id="acc">0%</b></span>
-            <span class="pill" aria-label="當前連勝數">連勝 <b id="streak">0</b></span>
-            <span class="pill" aria-label="累積總題數">總題數 <b id="total">0</b></span>
+            <span class="pill" aria-label="當前正確率"><span data-i18n="accuracy">正確率</span> <b id="acc">0%</b></span>
+            <span class="pill" aria-label="當前連勝數"><span data-i18n="streak">連勝</span> <b id="streak">0</b></span>
+            <span class="pill" aria-label="累積總題數"><span data-i18n="total">總題數</span> <b id="total">0</b></span>
           </div>
           <div class="row">
             <button id="next" class="primary" aria-label="進入下一題">下一題 ▶</button>
@@ -478,6 +516,14 @@
         showGame();
         showAuth(true); // 顯示登入視窗
       };
+      
+      // 語言切換按鈕
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.onclick = () => switchLanguage(btn.dataset.lang);
+      });
+      
+      // 初始化語言
+      switchLanguage(currentLang);
       
       // 遊戲標題點擊返回首頁
       els.gameTitle.onclick = () => showHome();
@@ -782,6 +828,215 @@
       americas: '美洲',
       oceania: '大洋洲'
     };
+
+    // 多語系字典
+    const i18n = {
+      'zh-TW': {
+        homeTitle: '世界國旗挑戰',
+        homeSubtitle: '測試你對世界各國國旗的認識',
+        startGame: '開始遊戲',
+        loginByGoogle: 'Login by Google',
+        gameTitle: '世界國旗挑戰',
+        selectRegion: '選擇地區',
+        selectDifficulty: '選擇難度',
+        mode: '模式：',
+        modeNormal: '一般',
+        modeTime: '計時',
+        resetRecord: '重置紀錄',
+        guest: '訪客',
+        hint: '請選出正確的國家名稱',
+        nextQuestion: '下一題 ▶',
+        statistics: '統計',
+        leaderboard: '排行榜',
+        accuracy: '正確率',
+        streak: '連勝',
+        total: '總題數',
+        answered: '已答對',
+        easy: '容易',
+        normal: '普通',
+        hard: '困難',
+        global: '全球',
+        asia: '亞洲',
+        europe: '歐洲',
+        africa: '非洲',
+        americas: '美洲',
+        oceania: '大洋洲'
+      },
+      'zh-CN': {
+        homeTitle: '世界国旗挑战',
+        homeSubtitle: '测试你对世界各国国旗的认识',
+        startGame: '开始游戏',
+        loginByGoogle: 'Login by Google',
+        gameTitle: '世界国旗挑战',
+        selectRegion: '选择地区',
+        selectDifficulty: '选择难度',
+        mode: '模式：',
+        modeNormal: '一般',
+        modeTime: '计时',
+        resetRecord: '重置记录',
+        guest: '访客',
+        hint: '请选出正确的国家名称',
+        nextQuestion: '下一题 ▶',
+        statistics: '统计',
+        leaderboard: '排行榜',
+        accuracy: '正确率',
+        streak: '连胜',
+        total: '总题数',
+        answered: '已答对',
+        easy: '容易',
+        normal: '普通',
+        hard: '困难',
+        global: '全球',
+        asia: '亚洲',
+        europe: '欧洲',
+        africa: '非洲',
+        americas: '美洲',
+        oceania: '大洋洲'
+      },
+      'en': {
+        homeTitle: 'World Flag Challenge',
+        homeSubtitle: 'Test your knowledge of world flags',
+        startGame: 'Start Game',
+        loginByGoogle: 'Login by Google',
+        gameTitle: 'World Flag Challenge',
+        selectRegion: 'Select Region',
+        selectDifficulty: 'Select Difficulty',
+        mode: 'Mode: ',
+        modeNormal: 'Normal',
+        modeTime: 'Timed',
+        resetRecord: 'Reset Record',
+        guest: 'Guest',
+        hint: 'Select the correct country name',
+        nextQuestion: 'Next ▶',
+        statistics: 'Statistics',
+        leaderboard: 'Leaderboard',
+        accuracy: 'Accuracy',
+        streak: 'Streak',
+        total: 'Total',
+        answered: 'Answered',
+        easy: 'Easy',
+        normal: 'Normal',
+        hard: 'Hard',
+        global: 'Global',
+        asia: 'Asia',
+        europe: 'Europe',
+        africa: 'Africa',
+        americas: 'Americas',
+        oceania: 'Oceania'
+      },
+      'ja': {
+        homeTitle: '世界の国旗チャレンジ',
+        homeSubtitle: '世界各国の国旗の知識をテスト',
+        startGame: 'ゲーム開始',
+        loginByGoogle: 'Login by Google',
+        gameTitle: '世界の国旗チャレンジ',
+        selectRegion: '地域を選択',
+        selectDifficulty: '難易度を選択',
+        mode: 'モード：',
+        modeNormal: '通常',
+        modeTime: 'タイム',
+        resetRecord: '記録をリセット',
+        guest: 'ゲスト',
+        hint: '正しい国名を選択してください',
+        nextQuestion: '次へ ▶',
+        statistics: '統計',
+        leaderboard: 'ランキング',
+        accuracy: '正解率',
+        streak: '連勝',
+        total: '総問題数',
+        answered: '正解数',
+        easy: '簡単',
+        normal: '普通',
+        hard: '難しい',
+        global: 'グローバル',
+        asia: 'アジア',
+        europe: 'ヨーロッパ',
+        africa: 'アフリカ',
+        americas: 'アメリカ大陸',
+        oceania: 'オセアニア'
+      }
+    };
+
+    // 當前語言
+    let currentLang = localStorage.getItem('language') || 'zh-TW';
+
+    // 切換語言函數
+    function switchLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('language', lang);
+      updateUI();
+      
+      // 更新按鈕狀態
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+      });
+    }
+
+    // 獲取翻譯文字
+    function t(key) {
+      return i18n[currentLang]?.[key] || i18n['zh-TW'][key] || key;
+    }
+
+    // 更新 UI 文字
+    function updateUI() {
+      // 首頁
+      const homeTitle = document.querySelector('.home-title');
+      const homeSubtitle = document.querySelector('.home-subtitle');
+      const startBtn = document.querySelector('#startWithLogin');
+      const loginSubtitle = startBtn?.querySelector('.home-btn-subtitle');
+      
+      if (homeTitle) homeTitle.textContent = t('homeTitle');
+      if (homeSubtitle) homeSubtitle.textContent = t('homeSubtitle');
+      if (startBtn) {
+        startBtn.childNodes[0].textContent = t('startGame') + ' ';
+      }
+      if (loginSubtitle) loginSubtitle.textContent = t('loginByGoogle');
+      
+      // 遊戲頁面
+      const gameTitle = document.querySelector('#gameTitle');
+      const hint = document.querySelector('#hint');
+      const nextBtn = document.querySelector('#next');
+      const statsBtn = document.querySelector('#stats');
+      const boardBtn = document.querySelector('#board');
+      const modeBtn = document.querySelector('#mode');
+      const resetBtn = document.querySelector('#reset');
+      
+      if (gameTitle) gameTitle.textContent = t('gameTitle');
+      if (hint) hint.textContent = t('hint');
+      if (nextBtn) nextBtn.textContent = t('nextQuestion');
+      if (statsBtn) statsBtn.textContent = t('statistics');
+      if (boardBtn) boardBtn.textContent = t('leaderboard');
+      if (resetBtn) resetBtn.textContent = t('resetRecord');
+      
+      // 更新模式按鈕
+      if (modeBtn) {
+        const isTimeMode = store.mode === 'time';
+        modeBtn.textContent = t('mode') + (isTimeMode ? t('modeTime') : t('modeNormal'));
+      }
+      
+      // 更新地區和難度選項
+      const regionSelect = document.querySelector('#region');
+      if (regionSelect) {
+        Array.from(regionSelect.options).forEach(opt => {
+          const key = opt.value;
+          opt.textContent = t(key);
+        });
+      }
+      
+      const difficultySelect = document.querySelector('#difficulty');
+      if (difficultySelect) {
+        Array.from(difficultySelect.options).forEach(opt => {
+          const key = opt.value;
+          opt.textContent = t(key);
+        });
+      }
+      
+      // 更新所有帶有 data-i18n 屬性的元素
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+      });
+    }
 
     const firebaseConfig = window.__FLAG_APP_FIREBASE__ || {
       apiKey: '',
