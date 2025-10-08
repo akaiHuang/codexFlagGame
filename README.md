@@ -12,13 +12,22 @@
    cd codexFlagGame
    ```
 
-2. **設定 Firebase（選用）**
+2. **設定 Firebase（必要，用於登入和排行榜功能）**
    ```bash
    # 複製配置範例檔案
    cp firebase.config.example.js firebase.config.js
    
    # 編輯 firebase.config.js 填入您的 Firebase 配置
    ```
+   
+   **📋 完整 Firebase 設定步驟請參考：[FIREBASE_SETUP.md](FIREBASE_SETUP.md)**
+   
+   包含：
+   - ✅ Firestore 資料庫結構
+   - ✅ Security Rules 設定
+   - ✅ Authentication 設定（Google + 匿名）
+   - ✅ 索引設定
+   - ✅ 完整圖解步驟
 
 3. **啟動本地伺服器**
    ```bash
