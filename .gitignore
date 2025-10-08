@@ -15,7 +15,6 @@ yarn-error.log*
 .firebase/
 firebase-debug.log
 firestore-debug.log
-firebase.config.js
 ui-debug.log
 database-debug.log
 hosting-debug.log
