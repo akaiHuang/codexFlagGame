@@ -13,16 +13,18 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    // 防止頻繁寫入 - profiles 使用 updatedAt
-    function notTooFrequentProfile() {
-      return !resource.exists || 
-             request.time > resource.data.updatedAt + duration.value(3, 's');
-    }
-    
-    // 防止頻繁寫入 - scores 使用 ts
-    function notTooFrequentScore() {
-      return !resource.exists || 
-             request.time > resource.data.ts + duration.value(3, 's');
+    // 驗證分數資料的合理性（傳入的資料）
+    function isValidScoreData() {
+      return request.resource.data.uid == request.auth.uid &&
+             request.resource.data.bestStreak is int &&
+             request.resource.data.accuracy is number &&
+             request.resource.data.total is int &&
+             request.resource.data.bestStreak >= 0 &&
+             request.resource.data.bestStreak <= 1000 &&
+             request.resource.data.accuracy >= 0 &&
+             request.resource.data.accuracy <= 100 &&
+             request.resource.data.total >= 0 &&
+             request.resource.data.total <= 100000;
     }
     
     // profiles - 使用者名稱
@@ -30,9 +32,8 @@ service cloud.firestore {
       // 🔓 公開讀取（排行榜需要顯示名稱）
       allow read: if true;
       
-      // 🔒 僅限擁有者寫入，限流，驗證資料
+      // 🔒 僅限擁有者寫入，驗證資料
       allow write: if isOwner(userId) && 
-        notTooFrequentProfile() &&
         request.resource.data.uid == userId &&
         request.resource.data.name is string &&
         request.resource.data.name.size() > 0 &&
@@ -44,19 +45,8 @@ service cloud.firestore {
       // 🔓 公開讀取（任何人都能瀏覽排行榜）
       allow read: if true;
       
-      // 🔒 僅限擁有者寫入，限流，驗證資料
-      allow write: if isOwner(userId) && 
-        notTooFrequentScore() &&
-        request.resource.data.uid == userId &&
-        request.resource.data.bestStreak is int &&
-        request.resource.data.accuracy is number &&
-        request.resource.data.total is int &&
-        request.resource.data.bestStreak >= 0 &&
-        request.resource.data.bestStreak <= 1000 &&
-        request.resource.data.accuracy >= 0 &&
-        request.resource.data.accuracy <= 100 &&
-        request.resource.data.total >= 0 &&
-        request.resource.data.total <= 100000;
+      // 🔒 僅限擁有者寫入，驗證資料
+      allow write: if isOwner(userId) && isValidScoreData();
     }
     
     // scores_region - 地區排行榜
@@ -64,21 +54,11 @@ service cloud.firestore {
       // 🔓 公開讀取（任何人都能瀏覽排行榜）
       allow read: if true;
       
-      // 🔒 僅限擁有者寫入，限流，驗證資料
+      // 🔒 僅限擁有者寫入，驗證資料
       allow write: if isSignedIn() && 
-        notTooFrequentScore() &&
         userRegionId.matches('^' + request.auth.uid + '_[A-Z]{2}$') &&
-        request.resource.data.uid == request.auth.uid &&
-        request.resource.data.bestStreak is int &&
-        request.resource.data.accuracy is number &&
-        request.resource.data.total is int &&
-        request.resource.data.region is string &&
-        request.resource.data.bestStreak >= 0 &&
-        request.resource.data.bestStreak <= 1000 &&
-        request.resource.data.accuracy >= 0 &&
-        request.resource.data.accuracy <= 100 &&
-        request.resource.data.total >= 0 &&
-        request.resource.data.total <= 100000;
+        isValidScoreData() &&
+        request.resource.data.region is string;
     }
     
     // 拒絕其他所有存取
