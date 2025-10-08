@@ -272,6 +272,7 @@
             <span class="pill" aria-label="當前正確率">正確率 <b id="acc">0%</b></span>
             <span class="pill" aria-label="當前連勝數">連勝 <b id="streak">0</b></span>
             <span class="pill" aria-label="累積總題數">總題數 <b id="total">0</b></span>
+            <span class="pill" aria-label="答對進度">已答對 <b id="correctCount">0</b>/<b id="totalFlags">0</b></span>
           </div>
           <div class="row">
             <button id="next" class="primary" aria-label="進入下一題">下一題 ▶</button>
@@ -374,7 +375,7 @@
     };
     function ensureStats() {
       const s = store.get();
-      s.total ??= 0; s.correct ??= 0; s.streak ??= 0; s.bestStreak ??= 0; s.by ??= {};
+      s.total ??= 0; s.correct ??= 0; s.streak ??= 0; s.bestStreak ??= 0; s.by ??= {}; s.correctFlags ??= [];
       store.set(s); return s;
     }
 
@@ -554,6 +555,8 @@
       acc: document.getElementById('acc'),
       streak: document.getElementById('streak'),
       total: document.getElementById('total'),
+      correctCount: document.getElementById('correctCount'),
+      totalFlags: document.getElementById('totalFlags'),
       stats: document.getElementById('stats'),
       board: document.getElementById('board'),
       statsModal: document.getElementById('statsModal'),
@@ -627,6 +630,27 @@
       els.acc.textContent = acc + '%';
       els.streak.textContent = s.streak || 0;
       els.total.textContent = s.total || 0;
+      
+      // 計算當前地區的國旗總數
+      const regionVal = els.region.value;
+      let totalFlagsInRegion = 0;
+      if (regionVal === 'global') {
+        totalFlagsInRegion = COUNTRIES.length;
+      } else {
+        totalFlagsInRegion = COUNTRIES.filter(c => c.region === regionVal).length;
+      }
+      
+      // 計算當前地區已答對的國旗數
+      const correctFlags = s.correctFlags || [];
+      const correctInRegion = regionVal === 'global' 
+        ? correctFlags.length
+        : correctFlags.filter(code => {
+            const country = COUNTRIES.find(c => c.code === code);
+            return country && country.region === regionVal;
+          }).length;
+      
+      els.correctCount.textContent = correctInRegion;
+      els.totalFlags.textContent = totalFlagsInRegion;
     }
 
     function updateStatsModal() {
@@ -707,6 +731,11 @@
         s.bestStreak = Math.max(s.bestStreak || 0, s.streak);
         cs.streak = (cs.streak || 0) + 1;
         cs.score = (cs.score ?? 0) + 1;
+        // 記錄答對的國旗
+        s.correctFlags = s.correctFlags || [];
+        if (!s.correctFlags.includes(cc)) {
+          s.correctFlags.push(cc);
+        }
         els.card.classList.add('celebrate');
         spawnConfetti(70 + Math.min(60, (s.streak||0) * 5));
         vibrate(30);
@@ -727,7 +756,7 @@
     function nextQuestion() { lock = false; renderQuestion(); }
 
     els.next.onclick = () => nextQuestion();
-    els.region.onchange = () => nextQuestion();
+    els.region.onchange = () => { nextQuestion(); updateHUD(); };
     els.difficulty.onchange = () => nextQuestion();
     els.reset.onclick = () => {
       if (confirm('確定要重置本機紀錄嗎？')) { store.reset(); ensureStats(); updateHUD(); nextQuestion(); }
