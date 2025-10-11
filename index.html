@@ -796,48 +796,104 @@
       els.options.appendChild(frag);
     }
 
-    function answer(chosen) {
+    async function answer(chosen) {
       if (lock) return;
       lock = true;
-      const s = ensureStats();
-      s.total = (s.total || 0) + 1;
+      
+      // 取得 Firebase context
+      const ctx = await ensureFirebase();
+      const { auth, functions, httpsCallable } = ctx;
+      
+      const user = auth.currentUser;
+      if (!user) {
+        // 未登入時顯示登入視窗
+        els.hint.textContent = t('needLogin');
+        lock = false;
+        showAuth(true);
+        return;
+      }
+
+      // 顯示載入狀態
+      [...els.options.children].forEach(b => b.disabled = true);
+      els.hint.textContent = t('submitting');
+
       const correct = chosen === current.correct;
+      const cc = current.correct;
+      const region = els.region.value;
+
+      // 先顯示答案（即使 API 失敗也要給使用者視覺反饋）
       [...els.options.children].forEach(b => {
         const code = b.dataset.code;
-        if (code === current.correct) b.classList.add('correct');
+        if (code === cc) b.classList.add('correct');
         if (code === chosen && !correct) b.classList.add('wrong');
-        b.disabled = true;
       });
-      const cc = current.correct;
-      s.by[cc] ??= { seen:0, wrong:0, streak:0, score:0 };
-      const cs = s.by[cc];
-      cs.seen += 1;
+
       if (correct) {
-        s.correct = (s.correct || 0) + 1;
-        s.streak = (s.streak || 0) + 1;
-        s.bestStreak = Math.max(s.bestStreak || 0, s.streak);
-        cs.streak = (cs.streak || 0) + 1;
-        cs.score = (cs.score ?? 0) + 1;
-        // 記錄答對的國旗
-        s.correctFlags = s.correctFlags || [];
-        if (!s.correctFlags.includes(cc)) {
-          s.correctFlags.push(cc);
-        }
         els.card.classList.add('celebrate');
-        spawnConfetti(70 + Math.min(60, (s.streak||0) * 5));
+        spawnConfetti(70 + Math.min(60, (store.get().streak || 0) * 5));
         vibrate(30);
         els.hint.textContent = t('correct');
       } else {
-        s.streak = 0;
-        cs.wrong = (cs.wrong || 0) + 1;
-        cs.streak = 0;
-        cs.score = Math.max(0, (cs.score ?? 0) - 1);
         els.card.classList.add('shake');
         vibrate([20, 80, 20]);
         els.hint.textContent = t('wrong') + getCountryName(cc);
       }
-      store.set(s);
-      updateHUD();
+
+      try {
+        // 呼叫 Cloud Function 提交答案
+        const submitAnswer = httpsCallable(functions, 'submitAnswer');
+        const result = await submitAnswer({
+          flagCode: cc,
+          answer: chosen,
+          region: region
+        });
+
+        if (result.data.success) {
+          // 更新本地統計資料（從伺服器同步）
+          const s = result.data.stats;
+          store.set(s);
+          updateHUD();
+        } else {
+          throw new Error('提交答案失敗');
+        }
+      } catch (error) {
+        console.error('提交答案時發生錯誤:', error);
+        
+        // 顯示錯誤訊息
+        if (error.code === 'unauthenticated') {
+          els.hint.textContent = t('needLogin');
+          showAuth(true);
+        } else {
+          els.hint.textContent = t('submitError');
+        }
+        
+        // 發生錯誤時也要更新本地資料（降級處理）
+        const s = ensureStats();
+        s.total = (s.total || 0) + 1;
+        s.by[cc] ??= { seen:0, wrong:0, streak:0, score:0 };
+        const cs = s.by[cc];
+        cs.seen += 1;
+        
+        if (correct) {
+          s.correct = (s.correct || 0) + 1;
+          s.streak = (s.streak || 0) + 1;
+          s.bestStreak = Math.max(s.bestStreak || 0, s.streak);
+          cs.streak = (cs.streak || 0) + 1;
+          cs.score = (cs.score ?? 0) + 1;
+          s.correctFlags = s.correctFlags || [];
+          if (!s.correctFlags.includes(cc)) {
+            s.correctFlags.push(cc);
+          }
+        } else {
+          s.streak = 0;
+          cs.wrong = (cs.wrong || 0) + 1;
+          cs.streak = 0;
+          cs.score = Math.max(0, (cs.score ?? 0) - 1);
+        }
+        
+        store.set(s);
+        updateHUD();
+      }
     }
 
     function nextQuestion() { lock = false; renderQuestion(); }
@@ -911,7 +967,10 @@
         leaderboardTitle: '排行榜',
         // 遊戲訊息
         correct: '正確！',
-        wrong: '答錯啦，正解：'
+        wrong: '答錯啦，正解：',
+        needLogin: '請先登入才能記錄分數',
+        submitting: '提交中...',
+        submitError: '提交失敗，請稍後再試'
       },
       'zh-CN': {
         homeTitle: '世界国旗挑战',
@@ -957,7 +1016,10 @@
         leaderboardTitle: '排行榜',
         // 遊戲訊息
         correct: '正确！',
-        wrong: '答错了，正解：'
+        wrong: '答错了，正解：',
+        needLogin: '请先登入才能记录分数',
+        submitting: '提交中...',
+        submitError: '提交失败，请稍后再试'
       },
       'en': {
         homeTitle: 'World Flag Challenge',
@@ -1003,7 +1065,10 @@
         leaderboardTitle: 'Leaderboard',
         // Game messages
         correct: 'Correct!',
-        wrong: 'Wrong! Answer: '
+        wrong: 'Wrong! Answer: ',
+        needLogin: 'Please login to save your score',
+        submitting: 'Submitting...',
+        submitError: 'Submit failed, please try again'
       },
       'ja': {
         homeTitle: '世界の国旗チャレンジ',
@@ -1049,7 +1114,10 @@
         leaderboardTitle: 'ランキング',
         // ゲームメッセージ
         correct: '正解！',
-        wrong: '不正解！正解：'
+        wrong: '不正解！正解：',
+        needLogin: 'スコアを記録するにはログインしてください',
+        submitting: '送信中...',
+        submitError: '送信に失敗しました、後でもう一度お試しください'
       }
     };
 
@@ -1196,15 +1264,22 @@
               where,
               limit,
               getDocs
+            },
+            {
+              getFunctions,
+              httpsCallable
             }
           ] = await Promise.all([
             import('https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js'),
             import('https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js'),
-            import('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js')
+            import('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js'),
+            import('https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js')
           ]);
           const app = initializeApp(firebaseConfig);
           const auth = getAuth(app);
           const db = getFirestore(app);
+          const functions = getFunctions(app);
+          
           if (location.protocol === 'https:' && firebaseConfig.measurementId) {
             try {
               const { getAnalytics, isSupported } = await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics.js');
@@ -1217,6 +1292,8 @@
             app,
             db,
             auth,
+            functions,
+            httpsCallable,
             onAuthStateChanged,
             signInAnonymously,
             signInWithPopup,
