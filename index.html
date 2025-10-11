@@ -566,10 +566,24 @@
 
       els.closeAuth.onclick = () => showAuth(false);
       els.guestContinue.onclick = async () => {
-        if (!auth.currentUser || !auth.currentUser.isAnonymous) {
-          await signInAnonymously(auth).catch(err => showNotification(`匿名登入失敗：${err.message}`, 'error'));
+        try {
+          // 匿名登入
+          if (!auth.currentUser || !auth.currentUser.isAnonymous) {
+            await signInAnonymously(auth);
+          }
+          
+          // 儲存訪客名字
+          const guestName = els.nicknameInput.value.trim();
+          if (guestName && auth.currentUser) {
+            await saveProfileName(ctx, auth.currentUser.uid, guestName.slice(0, 24));
+            console.log('✅ 訪客名字已儲存:', guestName);
+          }
+          
+          showAuth(false);
+        } catch (err) {
+          console.error('❌ 匿名登入失敗:', err);
+          showNotification(`登入失敗：${err.message}`, 'error');
         }
-        showAuth(false);
       };
       els.googleLogin.onclick = async () => {
         const provider = new GoogleAuthProvider();

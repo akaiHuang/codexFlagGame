@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>清空排行榜 - 管理員工具</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 600px;
+      margin: 100px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .container {
+      background: #16213e;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      margin-top: 0;
+      color: #f39c12;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 2px solid #0f3460;
+      border-radius: 8px;
+      background: #0f3460;
+      color: #eee;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .clear-btn {
+      background: #e74c3c;
+      color: white;
+    }
+    .clear-btn:hover {
+      background: #c0392b;
+      transform: translateY(-2px);
+    }
+    .clear-btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+    }
+    .result.success {
+      background: #27ae60;
+      display: block;
+    }
+    .result.error {
+      background: #e74c3c;
+      display: block;
+    }
+    .warning {
+      background: #f39c12;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗑️ 清空排行榜</h1>
+    
+    <div class="warning">
+      <strong>⚠️ 警告：</strong>此操作將永久刪除所有排行榜資料，無法恢復！
+    </div>
+
+    <input 
+      type="password" 
+      id="adminKey" 
+      placeholder="請輸入管理員密鑰"
+      autocomplete="off"
+    />
+
+    <button class="clear-btn" id="clearBtn">
+      清空所有排行榜資料
+    </button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js';
+    import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js';
+
+    // Firebase 配置
+    const firebaseConfig = {
+      apiKey: "AIzaSyDDmH8UdmLEBkPPp3tK3pD3Oc-DGVTB0Vw",
+      authDomain: "codexflaggame.firebaseapp.com",
+      projectId: "codexflaggame",
+      storageBucket: "codexflaggame.firebasestorage.app",
+      messagingSenderId: "571045602455",
+      appId: "1:571045602455:web:e1e72d3da1c52ba19ae4c9",
+      measurementId: "G-ECEJH88WTL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const functions = getFunctions(app);
+
+    const clearBtn = document.getElementById('clearBtn');
+    const adminKeyInput = document.getElementById('adminKey');
+    const resultDiv = document.getElementById('result');
+
+    clearBtn.onclick = async () => {
+      const adminKey = adminKeyInput.value.trim();
+      
+      if (!adminKey) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = '請輸入管理員密鑰';
+        return;
+      }
+
+      if (!confirm('確定要清空所有排行榜資料嗎？此操作無法恢復！')) {
+        return;
+      }
+
+      clearBtn.disabled = true;
+      clearBtn.textContent = '清空中...';
+      resultDiv.style.display = 'none';
+
+      try {
+        const clearLeaderboard = httpsCallable(functions, 'clearLeaderboard');
+        const result = await clearLeaderboard({ adminKey });
+
+        resultDiv.className = 'result success';
+        resultDiv.textContent = `✅ 清空成功！\n刪除了 ${result.data.deleted.scores} 個全球分數記錄\n刪除了 ${result.data.deleted.scores_region} 個地區分數記錄`;
+        
+        adminKeyInput.value = '';
+      } catch (error) {
+        console.error('清空失敗:', error);
+        resultDiv.className = 'result error';
+        
+        if (error.code === 'functions/permission-denied') {
+          resultDiv.textContent = '❌ 管理員密鑰錯誤！';
+        } else {
+          resultDiv.textContent = `❌ 清空失敗：${error.message}`;
+        }
+      } finally {
+        clearBtn.disabled = false;
+        clearBtn.textContent = '清空所有排行榜資料';
+      }
+    };
+
+    // 按 Enter 鍵執行
+    adminKeyInput.onkeydown = (e) => {
+      if (e.key === 'Enter') clearBtn.click();
+    };
+  </script>
+</body>
+</html>

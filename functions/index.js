@@ -270,3 +270,57 @@ exports.getUserStats = functions.https.onCall(async (data, context) => {
     );
   }
 });
+
+/**
+ * 清空排行榜資料 Cloud Function
+ * ⚠️ 僅供管理員使用，需要特殊密鑰
+ */
+exports.clearLeaderboard = functions.https.onCall(async (data, context) => {
+  const { adminKey } = data;
+  
+  // 驗證管理員密鑰（請自行修改為安全的密鑰）
+  const ADMIN_KEY = 'codex-admin-2024';
+  
+  if (adminKey !== ADMIN_KEY) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      '權限不足'
+    );
+  }
+
+  try {
+    console.log('🗑️ 開始清空排行榜...');
+    
+    // 刪除 scores 集合
+    const scoresSnapshot = await db.collection('scores').get();
+    console.log(`📊 找到 ${scoresSnapshot.size} 個 scores 文件`);
+    
+    const scoresBatch = db.batch();
+    scoresSnapshot.docs.forEach(doc => scoresBatch.delete(doc.ref));
+    if (scoresSnapshot.size > 0) await scoresBatch.commit();
+    
+    // 刪除 scores_region 集合
+    const regionsSnapshot = await db.collection('scores_region').get();
+    console.log(`📊 找到 ${regionsSnapshot.size} 個 scores_region 文件`);
+    
+    const regionsBatch = db.batch();
+    regionsSnapshot.docs.forEach(doc => regionsBatch.delete(doc.ref));
+    if (regionsSnapshot.size > 0) await regionsBatch.commit();
+    
+    console.log('✅ 排行榜已清空！');
+    
+    return {
+      success: true,
+      deleted: {
+        scores: scoresSnapshot.size,
+        scores_region: regionsSnapshot.size
+      }
+    };
+  } catch (error) {
+    console.error('❌ 清空排行榜失敗:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      '清空失敗'
+    );
+  }
+});
