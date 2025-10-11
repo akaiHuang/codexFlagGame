@@ -384,11 +384,15 @@
     function showGame() {
       homePage.classList.add('hidden');
       gamePage.classList.remove('hidden');
+      // 確保所有 UI 文字都是最新的語言
+      updateUI();
     }
     
     function showHome() {
       gamePage.classList.add('hidden');
       homePage.classList.remove('hidden');
+      // 確保首頁文字都是最新的語言
+      updateUI();
     }
     
     // 稍後會加入 gameTitle 的點擊事件
