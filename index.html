@@ -1361,9 +1361,21 @@
         const name = row.name || (row.uid?.slice(-6) || 'Player');
         return `<div class="item"><span>${place}. ${name}</span><span>連勝 ${row.bestStreak || 0}｜準確率 ${row.accuracy || 0}%｜題數 ${row.total || 0}</span></div>`;
       };
+      
       const globalSection = globalRows.length
         ? globalRows.map(toRow).join('')
         : '<div class="item">目前沒有資料</div>';
+      
+      // 如果選擇的是全球，只顯示全球榜（避免重複）
+      if (regionKey === 'global') {
+        els.boardList.innerHTML = `
+          <div class="item"><strong>全球排行榜</strong></div>
+          ${globalSection}
+        `;
+        return;
+      }
+      
+      // 其他地區顯示全球榜 + 地區榜
       const regionLabel = REGION_LABEL[regionKey] || '目前區域';
       const regionSection = regionRows.length
         ? regionRows.map(toRow).join('')
