@@ -142,6 +142,11 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
 
       scoreData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
 
+      // 計算全局準確率
+      const globalAccuracy = scoreData.total > 0 
+        ? Math.round((scoreData.correct / scoreData.total) * 100) 
+        : 0;
+
       // 更新地區分數（全球 + 當前地區）
       const regionsToUpdate = ['global'];
       if (region !== 'global') regionsToUpdate.push(region);
@@ -188,8 +193,11 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
 
       regionScoreData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
 
-      // 寫入資料
-      transaction.set(scoreRef, scoreData, { merge: false });
+      // 寫入資料（scores 集合加上 accuracy 欄位以供排行榜顯示）
+      transaction.set(scoreRef, {
+        ...scoreData,
+        accuracy: globalAccuracy
+      }, { merge: false });
       transaction.set(regionScoreRef, regionScoreData, { merge: false });
 
       return {
