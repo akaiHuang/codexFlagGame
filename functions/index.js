@@ -163,15 +163,17 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
           rs.streak = 0;
         }
         
-        // 寫入獨立的地區排行榜文件
+        // 計算準確率
+        const accuracy = rs.total > 0 ? Math.round((rs.correct / rs.total) * 100) : 0;
+        
+        // 寫入獨立的地區排行榜文件（格式與原本前端一致）
         transaction.set(regionDocRef, {
           uid,
           region: r,
           total: rs.total,
-          correct: rs.correct,
-          streak: rs.streak,
           bestStreak: rs.bestStreak,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          accuracy: accuracy,
+          ts: admin.firestore.FieldValue.serverTimestamp()
         });
       });
 
