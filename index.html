@@ -386,6 +386,20 @@
       gamePage.classList.remove('hidden');
       // 確保所有 UI 文字都是最新的語言
       updateUI();
+      
+      // 如果當前有題目顯示，重新渲染選項按鈕以更新國家名稱
+      if (current && current.options) {
+        const optionButtons = els.options.querySelectorAll('.opt');
+        if (optionButtons.length > 0) {
+          optionButtons.forEach((btn, index) => {
+            const code = btn.dataset.code;
+            btn.textContent = getCountryName(code);
+            btn.setAttribute('aria-label', `選項 ${index + 1}：${getCountryName(code)}`);
+          });
+          // 更新國旗的 aria-label
+          els.flagBox.setAttribute('aria-label', `國旗：${getCountryName(current.correct)}`);
+        }
+      }
     }
     
     function showHome() {
