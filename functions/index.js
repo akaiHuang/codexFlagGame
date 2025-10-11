@@ -171,7 +171,7 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
         // 計算準確率
         const accuracy = rs.total > 0 ? Math.round((rs.correct / rs.total) * 100) : 0;
         
-        const regionScoreData = {
+        const regionDocData = {
           uid,
           region: r,
           total: rs.total,
@@ -180,10 +180,10 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
           ts: admin.firestore.FieldValue.serverTimestamp()
         };
         
-        console.log(`📝 準備寫入 scores_region/${uid}_${r}:`, regionScoreData);
+        console.log(`📝 準備寫入 scores_region/${uid}_${r}:`, regionDocData);
         
         // 寫入獨立的地區排行榜文件（格式與原本前端一致）
-        transaction.set(regionDocRef, regionScoreData);
+        transaction.set(regionDocRef, regionDocData);
       });
 
       regionScoreData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
