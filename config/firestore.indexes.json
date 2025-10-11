@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "scores_region",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "region",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "bestStreak",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

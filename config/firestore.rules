@@ -50,11 +50,20 @@ service cloud.firestore {
     }
     
     // scores_region - 地區排行榜
-    match /scores_region/{userId} {
+    match /scores_region/{docId} {
       // 🔓 公開讀取（任何人都能瀏覽排行榜）
       allow read: if true;
       
       // 🔒 僅限 Cloud Functions 寫入（完全防止客戶端作弊）
+      allow write: if false;
+    }
+    
+    // users - 使用者統計資料（內部使用）
+    match /users/{userId} {
+      // 🔒 僅限擁有者讀取
+      allow read: if isOwner(userId);
+      
+      // 🔒 僅限 Cloud Functions 寫入
       allow write: if false;
     }
     
