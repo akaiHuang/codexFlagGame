@@ -1316,32 +1316,43 @@
     }
 
     async function submitScore() {
+      console.log('💾 submitScore: 檢查使用者登入狀態...');
       const s = store.get();
       const acc = s.total ? Math.round(s.correct / s.total * 100) : 0;
       const ctx = await ensureFirebase();
       let user = ctx.auth.currentUser;
+      
+      console.log('👤 當前使用者:', user ? user.uid : '未登入');
+      
       if (!user) {
+        console.log('⚠️ 使用者未登入，嘗試匿名登入...');
         try {
           await ctx.signInAnonymously(ctx.auth);
           user = ctx.auth.currentUser;
+          console.log('✅ 匿名登入成功:', user.uid);
         } catch (err) {
-          console.error('無法取得認證使用者', err);
+          console.error('❌ 無法取得認證使用者', err);
           return;
         }
       }
+      
       const uid = user?.uid;
-      if (!uid) return;
-      const region = els.region.value;
-      const scoreData = {
+      if (!uid) {
+        console.log('❌ 無法取得 UID');
+        return;
+      }
+      
+      console.log('📊 當前統計:', {
         uid,
         bestStreak: s.bestStreak || 0,
         accuracy: acc,
         total: s.total || 0,
-        region,
-        ts: ctx.serverTimestamp()
-      };
-      await ctx.setDoc(ctx.doc(ctx.db, 'scores', uid), scoreData, { merge: true });
-      await ctx.setDoc(ctx.doc(ctx.db, 'scores_region', `${uid}_${region}`), scoreData, { merge: true });
+        region: els.region.value
+      });
+      
+      // 注意：分數已經通過 Cloud Function 寫入，這裡不需要再寫入
+      // 如果需要確保最新的分數在排行榜，可以從 Firestore 讀取而不是寫入
+      console.log('✅ submitScore 完成（分數已由 Cloud Function 處理）');
     }
 
     function renderBoard(globalRows, regionRows, regionKey) {
@@ -1367,24 +1378,54 @@
 
     async function openLeaderboard() {
       try {
+        console.log('🏆 開始載入排行榜...');
         const ctx = await ensureFirebase();
         const { db, collection, query, orderBy, where, limit, getDocs } = ctx;
         els.boardList.innerHTML = '<div class="item">載入中...</div>';
         els.boardModal.classList.add('show');
+        
+        console.log('💾 提交當前分數...');
         await submitScore();
+        
         const region = els.region.value;
+        console.log('🌍 當前選擇的地區:', region);
+        
+        console.log('📊 準備查詢全球排行榜...');
         const globalQ = query(collection(db, 'scores'), orderBy('bestStreak', 'desc'), limit(50));
+        
+        console.log('🗺️ 準備查詢地區排行榜...', {
+          collection: 'scores_region',
+          region: region,
+          query: `where('region', '==', '${region}') + orderBy('bestStreak', 'desc')`
+        });
         const regionQ = query(
           collection(db, 'scores_region'),
           where('region', '==', region),
           orderBy('bestStreak', 'desc'),
           limit(50)
         );
+        
+        console.log('🔍 執行查詢...');
         const [globalSnap, regionSnap] = await Promise.all([getDocs(globalQ), getDocs(regionQ)]);
+        
+        console.log('✅ 查詢結果:', {
+          globalCount: globalSnap.docs.length,
+          regionCount: regionSnap.docs.length
+        });
+        
+        console.log('📄 全球排行榜前 3 筆資料:', globalSnap.docs.slice(0, 3).map(d => d.data()));
+        console.log('📄 地區排行榜前 3 筆資料:', regionSnap.docs.slice(0, 3).map(d => d.data()));
+        
         const [globalRows, regionRows] = await Promise.all([
           augmentWithNames(ctx, globalSnap.docs.map(d => d.data())),
           augmentWithNames(ctx, regionSnap.docs.map(d => d.data()))
         ]);
+        
+        console.log('👥 加上名稱後的資料:', {
+          globalRowsCount: globalRows.length,
+          regionRowsCount: regionRows.length
+        });
+        
         const sorter = (a, b) => {
           if ((b.bestStreak || 0) !== (a.bestStreak || 0)) return (b.bestStreak || 0) - (a.bestStreak || 0);
           return (b.accuracy || 0) - (a.accuracy || 0);
@@ -1394,8 +1435,14 @@
           regionRows.sort(sorter).slice(0, 20),
           region
         );
+        console.log('🎉 排行榜載入完成！');
       } catch (err) {
-        console.error('載入排行榜失敗:', err);
+        console.error('❌ 載入排行榜失敗:', err);
+        console.error('錯誤詳情:', {
+          code: err.code,
+          message: err.message,
+          stack: err.stack
+        });
         els.boardList.innerHTML = '<div class="item">載入失敗，請稍後再試</div>';
       }
     }

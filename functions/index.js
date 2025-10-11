@@ -51,8 +51,11 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
   const uid = context.auth.uid;
   const { flagCode, answer, region } = data;
 
+  console.log('📥 submitAnswer 被呼叫:', { uid, flagCode, answer, region });
+
   // 驗證輸入參數
   if (!flagCode || !answer || !region) {
+    console.error('❌ 缺少必要參數');
     throw new functions.https.HttpsError(
       'invalid-argument',
       '缺少必要參數：flagCode, answer, region'
@@ -143,6 +146,8 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
       const regionsToUpdate = ['global'];
       if (region !== 'global') regionsToUpdate.push(region);
 
+      console.log('🌍 需要更新的地區:', regionsToUpdate);
+
       // 為每個地區創建獨立的文件（方便查詢排行榜）
       const regionWrites = [];
       regionsToUpdate.forEach(r => {
@@ -166,15 +171,19 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
         // 計算準確率
         const accuracy = rs.total > 0 ? Math.round((rs.correct / rs.total) * 100) : 0;
         
-        // 寫入獨立的地區排行榜文件（格式與原本前端一致）
-        transaction.set(regionDocRef, {
+        const regionScoreData = {
           uid,
           region: r,
           total: rs.total,
           bestStreak: rs.bestStreak,
           accuracy: accuracy,
           ts: admin.firestore.FieldValue.serverTimestamp()
-        });
+        };
+        
+        console.log(`📝 準備寫入 scores_region/${uid}_${r}:`, regionScoreData);
+        
+        // 寫入獨立的地區排行榜文件（格式與原本前端一致）
+        transaction.set(regionDocRef, regionScoreData);
       });
 
       regionScoreData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
@@ -188,6 +197,13 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
         scoreData,
         regionScoreData
       };
+    });
+
+    console.log('✅ Transaction 完成，準備返回結果');
+    console.log('📊 最終統計:', {
+      correct: result.correct,
+      total: result.scoreData.total,
+      bestStreak: result.scoreData.bestStreak
     });
 
     // 返回結果
@@ -206,7 +222,7 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
     };
 
   } catch (error) {
-    console.error('提交答案時發生錯誤:', error);
+    console.error('❌ 提交答案時發生錯誤:', error);
     throw new functions.https.HttpsError(
       'internal',
       '伺服器錯誤，請稍後再試'
