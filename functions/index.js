@@ -106,6 +106,9 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
       // 更新總分數
       scoreData.total = (scoreData.total || 0) + 1;
 
+      // 確保 by 物件存在
+      if (!scoreData.by) scoreData.by = {};
+      
       // 更新國旗細節
       if (!scoreData.by[flagCode]) {
         scoreData.by[flagCode] = { seen: 0, wrong: 0, streak: 0, score: 0 };
@@ -140,11 +143,17 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
       const regionsToUpdate = ['global'];
       if (region !== 'global') regionsToUpdate.push(region);
 
+      // 為每個地區創建獨立的文件（方便查詢排行榜）
+      const regionWrites = [];
       regionsToUpdate.forEach(r => {
+        const regionDocRef = db.collection('scores_region').doc(`${uid}_${r}`);
+        
+        // 從 regionScoreData.regions[r] 獲取或創建統計
         if (!regionScoreData.regions[r]) {
           regionScoreData.regions[r] = { total: 0, correct: 0, streak: 0, bestStreak: 0 };
         }
         const rs = regionScoreData.regions[r];
+        
         rs.total = (rs.total || 0) + 1;
         if (correct) {
           rs.correct = (rs.correct || 0) + 1;
@@ -153,6 +162,17 @@ exports.submitAnswer = functions.https.onCall(async (data, context) => {
         } else {
           rs.streak = 0;
         }
+        
+        // 寫入獨立的地區排行榜文件
+        transaction.set(regionDocRef, {
+          uid,
+          region: r,
+          total: rs.total,
+          correct: rs.correct,
+          streak: rs.streak,
+          bestStreak: rs.bestStreak,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
       });
 
       regionScoreData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
